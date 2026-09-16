@@ -8,8 +8,8 @@ open that room's page.
 ```
 index.html          the game shell + HUD markup
 classic.html        the old plain card list (still linked, still works)
-css/style.css       all styling: wooden panels, keycaps, overlays
-js/
+garrison/
+  style.css         all styling: wooden panels, keycaps, overlays
   main.js           wires everything together and runs the frame loop
   content/site.js   >>> THE FILE YOU EDIT TO ADD A PAGE <<<
   core/             rng, input, camera, particles, procedural audio
@@ -20,6 +20,11 @@ js/
   modules/          the plug-in system + the modules that ship with it
 ```
 
+Everything the game owns lives under `garrison/`, deliberately: the site
+already serves another game's client from `/js/` (`/wizardgame/` loads
+`/js/main.js` by absolute path), so a top-level `js/` folder here would
+collide with it. Keep new files inside `garrison/` and nothing can clash.
+
 Everything is hand-drawn on a canvas at runtime — there are no image assets,
 and the only sound is synthesised with WebAudio. The page needs a web server
 (ES modules don't load from `file://`).
@@ -28,7 +33,7 @@ and the only sound is synthesised with WebAudio. The page needs a web server
 
 ## Adding a page
 
-Open `js/content/site.js` and add a room:
+Open `garrison/content/site.js` and add a room:
 
 ```js
 {
@@ -58,7 +63,7 @@ shooting it just rattles the chains. That's how "The Workshop" and
 ## Adding a feature (modules)
 
 A module is a plain object with optional hooks, registered in
-`js/modules/index.js`:
+`garrison/modules/index.js`:
 
 ```js
 export default {
@@ -95,5 +100,5 @@ so nobody is forced to play to get somewhere.
 
 If the game script fails to load or throws on startup, a fallback panel with
 those plain links takes over the page - the front page never becomes a dead
-end. Saved state (visited rooms, mute, stats) goes through `core/storage.js`,
+end. Saved state (visited rooms, mute, stats) goes through `garrison/core/storage.js`,
 which falls back to memory where `localStorage` is blocked.

@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=3" />
+  <link rel="stylesheet" href="garrison/style.css?v=4" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%238a5a2e'/><rect x='2' y='7' width='9' height='5' fill='%237c9450'/><rect x='10' y='8' width='5' height='2' fill='%23f6e3bd'/><rect x='2' y='12' width='10' height='2' fill='%233b2a1b'/></svg>" />
 </head>
 <body>
@@ -159,10 +159,10 @@
       function explain() {
         if (explained || !window.fetch) { return; }
         explained = true;
-        fetch('js/render/renderer.js', { method: 'HEAD' }).then(function (r) {
+        fetch('garrison/render/renderer.js', { method: 'HEAD' }).then(function (r) {
           if (!r.ok) {
-            say('js/render/renderer.js is missing (HTTP ' + r.status + '). The js/ folder on ' +
-                'this server is from an older build - upload the whole js/ directory.');
+            say('garrison/render/renderer.js is missing (HTTP ' + r.status + '). Upload the ' +
+                'whole garrison/ directory next to index.html.');
           }
         }).catch(function () { /* offline; the message above is enough */ });
       }
@@ -206,6 +206,6 @@
     </div>
   </noscript>
 
-  <script type="module" src="js/main.js?v=3"></script>
+  <script type="module" src="garrison/main.js?v=4"></script>
 </body>
 </html>
