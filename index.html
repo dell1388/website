@@ -136,16 +136,37 @@
     // Note: the flag is __garrison, not window.game - the canvas has id="game",
     // so window.game is truthy from named element access before any script runs.
     (function () {
-      var shown = false;
-      function fail(why) {
-        if (shown) { return; }
-        shown = true;
-        var el = document.getElementById('bootFail');
-        if (!el) { return; }
-        el.classList.remove('hidden');
+      var shown = false, explained = false;
+
+      function say(line) {
         var w = document.getElementById('bootFailWhy');
-        if (w && why) { w.textContent = String(why).slice(0, 160); }
+        if (!w || !line) { return; }
+        w.style.whiteSpace = 'pre-wrap';
+        w.textContent = (w.textContent ? w.textContent + '\n' : '') + String(line).slice(0, 200);
       }
+
+      function fail(why) {
+        if (!shown) {
+          shown = true;
+          var el = document.getElementById('bootFail');
+          if (el) { el.classList.remove('hidden'); }
+          say(why);
+        }
+        explain();
+      }
+
+      // Work out WHY it failed: is this server even serving the right js/ tree?
+      function explain() {
+        if (explained || !window.fetch) { return; }
+        explained = true;
+        fetch('js/render/renderer.js', { method: 'HEAD' }).then(function (r) {
+          if (!r.ok) {
+            say('js/render/renderer.js is missing (HTTP ' + r.status + '). The js/ folder on ' +
+                'this server is from an older build - upload the whole js/ directory.');
+          }
+        }).catch(function () { /* offline; the message above is enough */ });
+      }
+
       // Capture phase as well: a script element that 404s fires its error
       // event on the element and never bubbles up to window.
       window.addEventListener('error', function (e) {
@@ -159,12 +180,14 @@
         }
         fail(e && e.message);
       }, true);
+
       window.addEventListener('unhandledrejection', function (e) {
         if (!window.__garrison) { fail(e && e.reason && e.reason.message); }
       });
+
       setTimeout(function () {
-        if (!window.__garrison) { fail('The game script did not load.'); }
-      }, 6000);
+        if (!window.__garrison) { fail('The game script did not start.'); }
+      }, 3500);
     })();
   </script>
 
