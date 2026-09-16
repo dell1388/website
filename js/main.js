@@ -14,11 +14,13 @@ import { HUD } from './ui/hud.js';
 import { Minimap } from './ui/minimap.js';
 import { Overlays } from './ui/overlays.js';
 import { clamp } from './core/rng.js';
+import { requireCanvas, el, showFallback, warnStale } from './core/dom.js';
 
 class Game {
   constructor() {
-    this.canvas = document.getElementById('game');
-    this.g = this.canvas.getContext('2d');
+    const view = requireCanvas('game');
+    this.canvas = view.canvas;
+    this.g = view.ctx;
     this.world = buildWorld();
     this.world.props = buildProps(this.world);
     this.world.targets = buildTargets(this.world);
@@ -31,7 +33,8 @@ class Game {
     this.audio = new Audio();
     this.renderer = new Renderer(this.world);
     this.hud = new HUD(this.world);
-    this.minimap = new Minimap(document.getElementById('minimap'), this.world);
+    const mapCanvas = el('minimap');
+    this.minimap = mapCanvas && mapCanvas.getContext ? new Minimap(mapCanvas, this.world) : null;
     this.overlays = new Overlays(this);
 
     this.time = 0;
@@ -47,12 +50,18 @@ class Game {
     this._resize();
     addEventListener('resize', () => this._resize());
 
-    document.getElementById('muteBtn').addEventListener('click', () => this._toggleMute());
-    document.getElementById('menuBtn').addEventListener('click', () => this.overlays.setPaused(true));
+    const muteBtn = el('muteBtn');
+    const menuBtn = el('menuBtn');
+    if (muteBtn) { muteBtn.addEventListener('click', () => this._toggleMute()); }
+    if (menuBtn) { menuBtn.addEventListener('click', () => this.overlays.setPaused(true)); }
 
-    const muteBtn = document.getElementById('muteBtn');
-    muteBtn.classList.toggle('off', this.audio.muted);
-    muteBtn.setAttribute('aria-pressed', String(!this.audio.muted));
+    const missing = ['ui', 'minimap', 'muteBtn', 'pauseScreen', 'transition'].filter((id) => !el(id));
+    if (missing.length) { warnStale(missing); }
+
+    if (muteBtn) {
+      muteBtn.classList.toggle('off', this.audio.muted);
+      muteBtn.setAttribute('aria-pressed', String(!this.audio.muted));
+    }
 
     this._armAudio();
     this.registry.emit('start', null);
@@ -81,7 +90,8 @@ class Game {
 
   _toggleMute() {
     const m = this.audio.toggleMute();
-    const btn = document.getElementById('muteBtn');
+    const btn = el('muteBtn');
+    if (!btn) { return; }
     btn.classList.toggle('off', m);
     btn.setAttribute('aria-pressed', String(!m));
   }
@@ -134,12 +144,7 @@ class Game {
     if (this._frameErrors < 60) { return; }
     this.stopped = true;
     console.error('[garrison] giving up after repeated frame errors');
-    const fail = document.getElementById('bootFail');
-    if (fail) {
-      fail.classList.remove('hidden');
-      const why = document.getElementById('bootFailWhy');
-      if (why) { why.textContent = String((err && err.message) || err).slice(0, 160); }
-    }
+    showFallback(err);
   }
 
   _update(dt) {
@@ -317,7 +322,7 @@ class Game {
     g.restore();
 
     this.registry.drawUI(g);
-    this.minimap.draw(this, dt);
+    if (this.minimap) { this.minimap.draw(this, dt); }
   }
 }
 
@@ -331,12 +336,7 @@ const boot = () => {
     window.__garrison = window.game = new Game();
   } catch (err) {
     console.error('[garrison] boot failed', err);
-    const fail = document.getElementById('bootFail');
-    if (fail) {
-      fail.classList.remove('hidden');
-      const why = document.getElementById('bootFailWhy');
-      if (why) { why.textContent = String(err && err.message || err).slice(0, 160); }
-    }
+    showFallback(err);
   }
 };
 

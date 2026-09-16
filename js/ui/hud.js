@@ -1,6 +1,8 @@
 import { TILE } from '../world/world.js';
 
 const $ = (sel) => document.querySelector(sel);
+/** The HUD is optional furniture: never die because a node went missing. */
+const text = (node, value) => { if (node) { node.textContent = value; } };
 
 export class HUD {
   constructor(world) {
@@ -19,6 +21,7 @@ export class HUD {
   }
 
   _buildObjectives() {
+    if (!this.objectives) { this.rows = new Map(); return; }
     this.objectives.innerHTML = '';
     this.rows = new Map();
     for (const t of this.world.targets) {
@@ -46,6 +49,7 @@ export class HUD {
   }
 
   showToast(title, sub) {
+    if (!this.toast) { return; }
     this.toast.innerHTML = `<strong>${title}</strong><em>${sub || ''}</em>`;
     this.toast.classList.add('show');
     this.toastT = 2.6;
@@ -57,31 +61,33 @@ export class HUD {
     if (room !== this.currentRoom) {
       this.currentRoom = room;
       if (room) {
-        this.roomName.textContent = room.name;
-        this.roomBlurb.textContent = room.blurb || '';
+        text(this.roomName, room.name);
+        text(this.roomBlurb, room.blurb || '');
         this.showToast(room.name, room.blurb);
         state.registry.emit('room:enter', room);
       } else {
-        this.roomName.textContent = 'The Approach';
-        this.roomBlurb.textContent = 'dirt track between rooms';
+        text(this.roomName, 'The Approach');
+        text(this.roomBlurb, 'dirt track between rooms');
       }
     }
 
     const r = tank.reload > 0 ? 1 - tank.reload / tank.reloadTime : 1;
-    this.reloadFill.style.transform = `scaleX(${r})`;
-    this.reloadFill.classList.toggle('ready', r >= 1);
-    this.reloadLabel.textContent = r >= 1 ? 'SHELL READY' : 'RELOADING';
-    this.speedFill.style.transform = `scaleX(${Math.min(1, tank.speed01)})`;
+    if (this.reloadFill) {
+      this.reloadFill.style.transform = `scaleX(${r})`;
+      this.reloadFill.classList.toggle('ready', r >= 1);
+    }
+    text(this.reloadLabel, r >= 1 ? 'SHELL READY' : 'RELOADING');
+    if (this.speedFill) { this.speedFill.style.transform = `scaleX(${Math.min(1, tank.speed01)})`; }
 
     if (this.toastT > 0) {
       this.toastT -= dt;
-      if (this.toastT <= 0) { this.toast.classList.remove('show'); }
+      if (this.toastT <= 0 && this.toast) { this.toast.classList.remove('show'); }
     }
 
-    if (state.stats) {
+    if (state.stats && this.statLine) {
       const acc = state.stats.shots ? Math.round((state.stats.hits / state.stats.shots) * 100) : 0;
       const km = (state.stats.distance / TILE / 25).toFixed(2);
-      this.statLine.textContent = `ACC ${acc}%  ·  ${state.stats.shots} FIRED  ·  ${km} KM`;
+      text(this.statLine, `ACC ${acc}%  ·  ${state.stats.shots} FIRED  ·  ${km} KM`);
     }
   }
 }

@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=3" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%238a5a2e'/><rect x='2' y='7' width='9' height='5' fill='%237c9450'/><rect x='10' y='8' width='5' height='2' fill='%23f6e3bd'/><rect x='2' y='12' width='10' height='2' fill='%233b2a1b'/></svg>" />
 </head>
 <body>
@@ -146,8 +146,8 @@
         var w = document.getElementById('bootFailWhy');
         if (w && why) { w.textContent = String(why).slice(0, 160); }
       }
-      // Capture phase as well: a <script> that 404s fires error on the element
-      // and never bubbles up to window.
+      // Capture phase as well: a script element that 404s fires its error
+      // event on the element and never bubbles up to window.
       window.addEventListener('error', function (e) {
         if (window.__garrison) { return; }
         var t = e && e.target;
@@ -183,6 +183,6 @@
     </div>
   </noscript>
 
-  <script type="module" src="js/main.js"></script>
+  <script type="module" src="js/main.js?v=3"></script>
 </body>
 </html>

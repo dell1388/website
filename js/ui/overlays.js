@@ -17,7 +17,7 @@ export class Overlays {
   }
 
   setPaused(p) {
-    if (this.leaving) { return; }
+    if (this.leaving || !this.pause) { return; }
     this.game.paused = p;
     this.pause.classList.toggle('hidden', !p);
     this.game.registry.emit(p ? 'pause' : 'resume', null);
@@ -27,11 +27,12 @@ export class Overlays {
   breach(target, done) {
     if (this.leaving) { return; }
     this.leaving = true;
-    this.transTitle.textContent = target.label;
-    this.transSub.textContent = 'breaching…';
+    if (!this.transition) { done(); return; }
+    if (this.transTitle) { this.transTitle.textContent = target.label; }
+    if (this.transSub) { this.transSub.textContent = 'breaching…'; }
     this.transition.classList.add('show');
     setTimeout(() => {
-      this.transSub.textContent = 'entering';
+      if (this.transSub) { this.transSub.textContent = 'entering'; }
       done();
     }, 1150);
   }
