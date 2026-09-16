@@ -2,113 +2,179 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Games</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: #0f0f0f url('/bg.jpg') center/cover no-repeat fixed;
-      font-family: sans-serif;
-      gap: 2rem;
-      padding: 2rem;
-    }
-
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.62);
-      z-index: 0;
-    }
-
-    h1, .games, footer {
-      position: relative;
-      z-index: 1;
-    }
-
-    h1 {
-      color: #f0f0f0;
-      font-size: 1.5rem;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      opacity: 0.5;
-    }
-
-    .games {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1.5rem;
-      justify-content: center;
-    }
-
-    a.card {
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-      width: 220px;
-      padding: 1.5rem 1.25rem;
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 8px;
-      background: rgba(15,15,15,0.75);
-      backdrop-filter: blur(6px);
-      color: #f0f0f0;
-      text-decoration: none;
-      transition: border-color 0.15s, background 0.15s;
-    }
-
-    a.card:hover {
-      border-color: rgba(255,255,255,0.35);
-      background: rgba(25,25,25,0.85);
-    }
-
-    a.card .name {
-      font-size: 1.1rem;
-      font-weight: 600;
-    }
-
-    a.card .desc {
-      font-size: 0.8rem;
-      color: #aaa;
-      line-height: 1.4;
-    }
-
-    footer {
-      font-size: 0.65rem;
-      color: rgba(255,255,255,0.25);
-      text-align: center;
-    }
-
-    footer a {
-      color: inherit;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="description" content="A tank you drive with WASD. Shoot the target in each room to open a page." />
+  <meta name="theme-color" content="#8a5a2e" />
+  <title>Garrison · drive, aim, breach</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%238a5a2e'/><rect x='2' y='7' width='9' height='5' fill='%237c9450'/><rect x='10' y='8' width='5' height='2' fill='%23f6e3bd'/><rect x='2' y='12' width='10' height='2' fill='%233b2a1b'/></svg>" />
 </head>
 <body>
-  <h1>Games</h1>
-  <div class="games">
-    <a class="card" href="/clockwords/">
-      <span class="name">Word War 3</span>
-      <span class="desc">Type words to fire shells at an armoured column. A military remake of Clockwords.</span>
-    </a>
-    <a class="card" href="/wizardgame/">
-      <span class="name">Aetherfall</span>
-      <span class="desc">A duelling arena for wizards. Bind spells or type incantations to cast them.</span>
-    </a>
-    <a class="card" href="/vehicle-spotter/">
-      <span class="name">Vehicle Spotter</span>
-      <span class="desc">Name the vehicle in the photo. 32 vehicles across five eras.</span>
-    </a>
+  <canvas id="game" aria-label="Tank navigation map. Keyboard: W A S D to drive, arrow keys to aim, space to fire."></canvas>
+
+  <!-- ================= HUD ================= -->
+  <div id="ui">
+    <div class="corner tl">
+      <div class="panel room-panel">
+        <span class="eyebrow">now entering</span>
+        <h1 id="roomName">The Motor Pool</h1>
+        <p id="roomBlurb">pick a road, shoot the sign</p>
+      </div>
+    </div>
+
+    <div class="corner tr">
+      <button id="muteBtn" class="chip" aria-pressed="true" title="Mute (M)">
+        <span class="ico">♪</span><span class="lbl">sound</span>
+      </button>
+      <button id="menuBtn" class="chip" title="Menu (Esc)">
+        <span class="ico">☰</span><span class="lbl">menu</span>
+      </button>
+    </div>
+
+    <div class="corner bl">
+      <div class="panel obj-panel">
+        <span class="eyebrow">destinations</span>
+        <ul id="objectives"></ul>
+        <div id="statLine" class="statline">ACC 0% · 0 FIRED · 0.00 KM</div>
+      </div>
+    </div>
+
+    <div class="corner br">
+      <div class="panel map-panel">
+        <span class="eyebrow">field map</span>
+        <canvas id="minimap" width="216" height="156"></canvas>
+      </div>
+    </div>
+
+    <div class="corner bc">
+      <div class="panel gauge-panel">
+        <div class="gauge">
+          <span class="gauge-label" id="reloadLabel">SHELL READY</span>
+          <div class="bar"><i id="reloadFill" class="fill ready"></i></div>
+        </div>
+        <div class="gauge small">
+          <span class="gauge-label">THROTTLE</span>
+          <div class="bar"><i id="speedFill" class="fill speed"></i></div>
+        </div>
+        <div class="touchhint">drag the left half to drive · touch the right half to aim &amp; fire</div>
+        <div class="keyhint">
+          <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> drive
+          <span class="dot">·</span><kbd>MOUSE</kbd>/<kbd>←</kbd><kbd>→</kbd> aim
+          <span class="dot">·</span><kbd>SPACE</kbd> fire
+          <span class="dot">·</span><kbd>SHIFT</kbd> boost
+        </div>
+      </div>
+    </div>
+
+    <div id="toast"></div>
   </div>
-  <footer>
-    Background: <a href="https://commons.wikimedia.org/wiki/File:CV90120.jpg" target="_blank">CV90120</a>
-    by <a href="https://commons.wikimedia.org/wiki/User:Swadim" target="_blank">Swadim</a>,
-    <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank">CC BY-SA 4.0</a>
-  </footer>
+
+  <!-- ================= TITLE ================= -->
+  <div id="titleScreen" class="screen">
+    <div class="sign-post">
+      <div class="big-sign">
+        <span class="sign-eyebrow">a website you have to drive around</span>
+        <h1 class="sign-title">GARRISON</h1>
+        <span class="sign-sub">drive · aim · breach</span>
+      </div>
+      <div class="sign-legs"><i></i><i></i></div>
+    </div>
+
+    <div class="panel start-panel">
+      <div class="controls-grid">
+        <div class="ctl">
+          <div class="keys wasd">
+            <kbd class="w">W</kbd><kbd class="a">A</kbd><kbd class="s">S</kbd><kbd class="d">D</kbd>
+          </div>
+          <span>drive the tank</span>
+        </div>
+        <div class="ctl">
+          <div class="keys"><kbd class="wide">MOUSE</kbd></div>
+          <span>swing the turret</span>
+        </div>
+        <div class="ctl">
+          <div class="keys"><kbd class="wide">SPACE</kbd></div>
+          <span>fire a shell</span>
+        </div>
+        <div class="ctl">
+          <div class="keys"><kbd class="wide">SHIFT</kbd></div>
+          <span>boost</span>
+        </div>
+      </div>
+      <p class="brief">Each room holds a target. Put three shells through it and the page opens.</p>
+      <button id="startBtn" class="wood-btn big">START ENGINE</button>
+      <p class="skip">in a hurry?
+        <a href="/clockwords/">Word War 3</a> ·
+        <a href="/wizardgame/">Aetherfall</a> ·
+        <a href="/vehicle-spotter/">Vehicle Spotter</a> ·
+        <a href="/classic.html">plain list</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- ================= PAUSE ================= -->
+  <div id="pauseScreen" class="screen hidden">
+    <div class="panel pause-panel">
+      <h2>PAUSED</h2>
+      <div class="pause-grid">
+        <section>
+          <h3>Direct links</h3>
+          <ul class="link-list">
+            <li><a href="/clockwords/">Word War 3</a><em>type words, fire shells</em></li>
+            <li><a href="/wizardgame/">Aetherfall</a><em>wizards, duelling</em></li>
+            <li><a href="/vehicle-spotter/">Vehicle Spotter</a><em>name the vehicle</em></li>
+            <li><a href="/classic.html">Field Notes</a><em>the old plain front page</em></li>
+          </ul>
+        </section>
+        <section>
+          <h3>Controls</h3>
+          <ul class="ctl-list">
+            <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>drive</span></li>
+            <li><kbd>MOUSE</kbd><span>aim turret</span></li>
+            <li><kbd>←</kbd><kbd>→</kbd><span>aim without a mouse</span></li>
+            <li><kbd>SPACE</kbd><span>fire</span></li>
+            <li><kbd>SHIFT</kbd><span>boost</span></li>
+            <li><kbd>M</kbd><span>mute</span></li>
+            <li><kbd>ESC</kbd><span>this menu</span></li>
+          </ul>
+        </section>
+      </div>
+      <button id="resumeBtn" class="wood-btn">BACK TO THE TANK</button>
+      <p class="credit">
+        Background art: <a href="https://commons.wikimedia.org/wiki/File:CV90120.jpg" target="_blank" rel="noopener">CV90120</a>
+        by <a href="https://commons.wikimedia.org/wiki/User:Swadim" target="_blank" rel="noopener">Swadim</a>,
+        <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- ================= BREACH TRANSITION ================= -->
+  <div id="transition">
+    <div class="trans-inner">
+      <div class="trans-ring"></div>
+      <h2 id="transTitle">ROOM</h2>
+      <p id="transSub">breaching…</p>
+    </div>
+  </div>
+
+  <noscript>
+    <div class="screen noscript-screen">
+      <div class="panel">
+        <h2>No JavaScript?</h2>
+        <p>The tank needs it. Here are the plain links:</p>
+        <ul class="link-list">
+          <li><a href="/clockwords/">Word War 3</a></li>
+          <li><a href="/wizardgame/">Aetherfall</a></li>
+          <li><a href="/vehicle-spotter/">Vehicle Spotter</a></li>
+          <li><a href="/classic.html">Field Notes</a></li>
+        </ul>
+      </div>
+    </div>
+  </noscript>
+
+  <script type="module" src="/js/main.js"></script>
 </body>
 </html>
