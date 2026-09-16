@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Games</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #0f0f0f url('/bg.jpg') center/cover no-repeat fixed;
+      font-family: sans-serif;
+      gap: 2rem;
+      padding: 2rem;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.62);
+      z-index: 0;
+    }
+
+    h1, .games, footer {
+      position: relative;
+      z-index: 1;
+    }
+
+    h1 {
+      color: #f0f0f0;
+      font-size: 1.5rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      opacity: 0.5;
+    }
+
+    .games {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      justify-content: center;
+    }
+
+    a.card {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      width: 220px;
+      padding: 1.5rem 1.25rem;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      background: rgba(15,15,15,0.75);
+      backdrop-filter: blur(6px);
+      color: #f0f0f0;
+      text-decoration: none;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    a.card:hover {
+      border-color: rgba(255,255,255,0.35);
+      background: rgba(25,25,25,0.85);
+    }
+
+    a.card .name {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    a.card .desc {
+      font-size: 0.8rem;
+      color: #aaa;
+      line-height: 1.4;
+    }
+
+    footer {
+      font-size: 0.65rem;
+      color: rgba(255,255,255,0.25);
+      text-align: center;
+    }
+
+    footer a {
+      color: inherit;
+    }
+  </style>
+</head>
+<body>
+  <h1>Games</h1>
+  <div class="games">
+    <a class="card" href="/clockwords/">
+      <span class="name">Word War 3</span>
+      <span class="desc">Type words to fire shells at an armoured column. A military remake of Clockwords.</span>
+    </a>
+    <a class="card" href="/wizardgame/">
+      <span class="name">Aetherfall</span>
+      <span class="desc">A duelling arena for wizards. Bind spells or type incantations to cast them.</span>
+    </a>
+    <a class="card" href="/vehicle-spotter/">
+      <span class="name">Vehicle Spotter</span>
+      <span class="desc">Name the vehicle in the photo. 32 vehicles across five eras.</span>
+    </a>
+  </div>
+  <footer>
+    Background: <a href="https://commons.wikimedia.org/wiki/File:CV90120.jpg" target="_blank">CV90120</a>
+    by <a href="https://commons.wikimedia.org/wiki/User:Swadim" target="_blank">Swadim</a>,
+    <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank">CC BY-SA 4.0</a>
+  </footer>
+</body>
+</html>
