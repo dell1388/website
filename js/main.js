@@ -36,7 +36,6 @@ class Game {
 
     this.time = 0;
     this.paused = false;
-    this.running = false;
     this.treadT = 0;
     this.stats = null;
 
@@ -51,16 +50,33 @@ class Game {
     document.getElementById('muteBtn').addEventListener('click', () => this._toggleMute());
     document.getElementById('menuBtn').addEventListener('click', () => this.overlays.setPaused(true));
 
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.classList.toggle('off', this.audio.muted);
+    muteBtn.setAttribute('aria-pressed', String(!this.audio.muted));
+
+    this._armAudio();
+    this.registry.emit('start', null);
+    this.hud.showToast('The Motor Pool', 'WASD to drive · shoot a target to enter');
+
     this.last = performance.now();
     requestAnimationFrame((t) => this._frame(t));
   }
 
-  begin() {
-    this.running = true;
-    this.audio.start();
-    this.audio.resume();
-    this.registry.emit('start', null);
-    this.hud.showToast('The Motor Pool', 'WASD to drive · aim · fire');
+  /**
+   * Browsers only allow audio after a real gesture, so the engine note starts
+   * on whichever input the player gives first.
+   */
+  _armAudio() {
+    const go = () => {
+      this.audio.start();
+      this.audio.resume();
+      removeEventListener('keydown', go);
+      removeEventListener('pointerdown', go);
+      removeEventListener('touchstart', go);
+    };
+    addEventListener('keydown', go);
+    addEventListener('pointerdown', go);
+    addEventListener('touchstart', go);
   }
 
   _toggleMute() {
@@ -85,35 +101,45 @@ class Game {
   }
 
   _frame(now) {
+    // Queue the next frame first: if anything below throws, the loop keeps
+    // running instead of freezing the page on the last drawn frame.
+    if (!this.stopped) { requestAnimationFrame((t) => this._frame(t)); }
+
     const dt = Math.min(0.05, (now - this.last) / 1000);
     this.last = now;
     this.time += dt;
 
-    if (this.running) {
-      // pause + mute stay live while paused, so Esc toggles both ways
-      if (this.input.hit('Escape') || this.input.hit('KeyP')) { this.overlays.setPaused(!this.paused); }
-      if (this.input.hit('KeyM')) { this._toggleMute(); }
-      if (!this.paused) { this._update(dt); }
-    } else {
-      this._idleCamera(dt);
-      if (this.input.hit('Space') || this.input.hit('Enter') || this.input.hit('KeyW')) {
-        this.overlays.start();
-      }
+    try {
+      this._tick(dt);
+    } catch (err) {
+      this._onFrameError(err);
     }
-
-    this._draw(dt);
     this.input.endFrame();
-    requestAnimationFrame((t) => this._frame(t));
   }
 
-  _idleCamera(dt) {
-    const hub = this.world.hub;
-    const cx = (hub.x + hub.w / 2) * TILE, cy = (hub.y + hub.h / 2) * TILE;
-    const a = this.time * 0.13;
-    this.camera.targetZoom = this.baseZoom * 0.92;
-    this.camera.follow(cx + Math.cos(a) * 190, cy + Math.sin(a) * 120, dt);
-    this.particles.update(dt);
-    this.registry.update(dt);
+  _tick(dt) {
+
+    // pause + mute stay live while paused, so Esc toggles both ways
+    if (this.input.hit('Escape') || this.input.hit('KeyP')) { this.overlays.setPaused(!this.paused); }
+    if (this.input.hit('KeyM')) { this._toggleMute(); }
+    if (!this.paused) { this._update(dt); }
+
+    this._draw(dt);
+  }
+
+  /** A handful of bad frames is survivable; a broken game is not. */
+  _onFrameError(err) {
+    this._frameErrors = (this._frameErrors || 0) + 1;
+    if (this._frameErrors <= 3) { console.error('[garrison] frame error', err); }
+    if (this._frameErrors < 60) { return; }
+    this.stopped = true;
+    console.error('[garrison] giving up after repeated frame errors');
+    const fail = document.getElementById('bootFail');
+    if (fail) {
+      fail.classList.remove('hidden');
+      const why = document.getElementById('bootFailWhy');
+      if (why) { why.textContent = String((err && err.message) || err).slice(0, 160); }
+    }
   }
 
   _update(dt) {
@@ -295,14 +321,25 @@ class Game {
   }
 }
 
-// Wait for the pixel fonts so canvas text is not drawn in a fallback face.
-let booted = false;
+/**
+ * Boot straight away. Canvas text is redrawn every frame, so if the pixel
+ * fonts arrive late they simply appear - nothing needs to wait for them,
+ * and a font CDN that never answers can no longer hold the game hostage.
+ */
 const boot = () => {
-  if (booted) { return; }
-  booted = true;
-  window.game = new Game();
+  try {
+    window.__garrison = window.game = new Game();
+  } catch (err) {
+    console.error('[garrison] boot failed', err);
+    const fail = document.getElementById('bootFail');
+    if (fail) {
+      fail.classList.remove('hidden');
+      const why = document.getElementById('bootFailWhy');
+      if (why) { why.textContent = String(err && err.message || err).slice(0, 160); }
+    }
+  }
 };
-if (document.fonts && document.fonts.ready) {
-  setTimeout(boot, 1500);
-  document.fonts.ready.then(boot).catch(boot);
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot, { once: true });
 } else { boot(); }

@@ -1,5 +1,6 @@
 import { TILE } from '../world/world.js';
 import { P } from '../render/palette.js';
+import { load, save } from '../core/storage.js';
 
 /** Contextual floating hint above the nearest target, plus first-run coaching. */
 export default {
@@ -8,14 +9,14 @@ export default {
   moved: false,
   t: 0,
 
-  init() { this.seen = localStorage.getItem('garrison.seenHints') === '1'; },
+  init() { this.seen = load('garrison.seenHints') === '1'; },
 
   update(dt, ctx) {
     this.t += dt;
     if (Math.abs(ctx.tank.speed) > 40) { this.moved = true; }
     if (this.moved && this.shotFired && !this.seen) {
       this.seen = true;
-      try { localStorage.setItem('garrison.seenHints', '1'); } catch (e) { /* ignore */ }
+      save('garrison.seenHints', '1');
     }
   },
 

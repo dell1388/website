@@ -1,4 +1,5 @@
 import { TILE } from '../world/world.js';
+import { load, save } from '../core/storage.js';
 
 /**
  * One shootable target per room that has an `href`.
@@ -26,7 +27,7 @@ export function buildTargets(world) {
       shake: 0,
       bob: Math.random() * 6.28,
       openT: 0,
-      visited: localStorage.getItem('garrison.visited.' + r.id) === '1',
+      visited: load('garrison.visited.' + r.id) === '1',
       dead: false,
     });
   }
@@ -34,6 +35,6 @@ export function buildTargets(world) {
 }
 
 export function markVisited(t) {
-  try { localStorage.setItem('garrison.visited.' + t.id, '1'); } catch (e) { /* private mode */ }
+  save('garrison.visited.' + t.id, '1');
   t.visited = true;
 }

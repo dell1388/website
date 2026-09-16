@@ -1,13 +1,13 @@
+import { loadJSON, saveJSON } from '../core/storage.js';
+
 /** Tracks shots, hits and rooms opened; feeds the HUD accuracy readout. */
 export default {
   id: 'stats',
   data: { shots: 0, hits: 0, opened: 0, distance: 0 },
 
   init(ctx) {
-    try {
-      const saved = JSON.parse(localStorage.getItem('garrison.stats') || 'null');
-      if (saved) { this.data = { ...this.data, ...saved }; }
-    } catch (e) { /* ignore */ }
+    const saved = loadJSON('garrison.stats');
+    if (saved) { this.data = { ...this.data, ...saved }; }
     ctx.stats = this.data;
   },
 
@@ -22,7 +22,5 @@ export default {
     if (ev === 'pause') { this._save(); }
   },
 
-  _save() {
-    try { localStorage.setItem('garrison.stats', JSON.stringify(this.data)); } catch (e) { /* ignore */ }
-  },
+  _save() { saveJSON('garrison.stats', this.data); },
 };

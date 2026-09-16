@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="css/style.css" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%238a5a2e'/><rect x='2' y='7' width='9' height='5' fill='%237c9450'/><rect x='10' y='8' width='5' height='2' fill='%23f6e3bd'/><rect x='2' y='12' width='10' height='2' fill='%233b2a1b'/></svg>" />
 </head>
 <body>
@@ -72,49 +72,6 @@
     <div id="toast"></div>
   </div>
 
-  <!-- ================= TITLE ================= -->
-  <div id="titleScreen" class="screen">
-    <div class="sign-post">
-      <div class="big-sign">
-        <span class="sign-eyebrow">a website you have to drive around</span>
-        <h1 class="sign-title">GARRISON</h1>
-        <span class="sign-sub">drive · aim · breach</span>
-      </div>
-      <div class="sign-legs"><i></i><i></i></div>
-    </div>
-
-    <div class="panel start-panel">
-      <div class="controls-grid">
-        <div class="ctl">
-          <div class="keys wasd">
-            <kbd class="w">W</kbd><kbd class="a">A</kbd><kbd class="s">S</kbd><kbd class="d">D</kbd>
-          </div>
-          <span>drive the tank</span>
-        </div>
-        <div class="ctl">
-          <div class="keys"><kbd class="wide">MOUSE</kbd></div>
-          <span>swing the turret</span>
-        </div>
-        <div class="ctl">
-          <div class="keys"><kbd class="wide">SPACE</kbd></div>
-          <span>fire a shell</span>
-        </div>
-        <div class="ctl">
-          <div class="keys"><kbd class="wide">SHIFT</kbd></div>
-          <span>boost</span>
-        </div>
-      </div>
-      <p class="brief">Each room holds a target. Put three shells through it and the page opens.</p>
-      <button id="startBtn" class="wood-btn big">START ENGINE</button>
-      <p class="skip">in a hurry?
-        <a href="/clockwords/">Word War 3</a> ·
-        <a href="/wizardgame/">Aetherfall</a> ·
-        <a href="/vehicle-spotter/">Vehicle Spotter</a> ·
-        <a href="/classic.html">plain list</a>
-      </p>
-    </div>
-  </div>
-
   <!-- ================= PAUSE ================= -->
   <div id="pauseScreen" class="screen hidden">
     <div class="panel pause-panel">
@@ -160,6 +117,57 @@
     </div>
   </div>
 
+  <div id="bootFail" class="screen hidden">
+    <div class="panel boot-panel">
+      <h2>The tank would not start</h2>
+      <p>Something went wrong loading the game. The pages are all still here:</p>
+      <ul class="link-list">
+        <li><a href="/clockwords/">Word War 3</a><em>type words, fire shells</em></li>
+        <li><a href="/wizardgame/">Aetherfall</a><em>wizards, duelling</em></li>
+        <li><a href="/vehicle-spotter/">Vehicle Spotter</a><em>name the vehicle</em></li>
+        <li><a href="/classic.html">Field Notes</a><em>the old plain front page</em></li>
+      </ul>
+      <p id="bootFailWhy" class="boot-why"></p>
+    </div>
+  </div>
+
+  <script>
+    // Classic script on purpose: this has to run even where the module never does.
+    // Note: the flag is __garrison, not window.game - the canvas has id="game",
+    // so window.game is truthy from named element access before any script runs.
+    (function () {
+      var shown = false;
+      function fail(why) {
+        if (shown) { return; }
+        shown = true;
+        var el = document.getElementById('bootFail');
+        if (!el) { return; }
+        el.classList.remove('hidden');
+        var w = document.getElementById('bootFailWhy');
+        if (w && why) { w.textContent = String(why).slice(0, 160); }
+      }
+      // Capture phase as well: a <script> that 404s fires error on the element
+      // and never bubbles up to window.
+      window.addEventListener('error', function (e) {
+        if (window.__garrison) { return; }
+        var t = e && e.target;
+        if (t && t !== window && t.tagName) {
+          // A resource failed. Only the game script is fatal - a blocked font
+          // stylesheet or image is not, so do not cry wolf over those.
+          if (t.tagName === 'SCRIPT') { fail('The game script did not load.'); }
+          return;
+        }
+        fail(e && e.message);
+      }, true);
+      window.addEventListener('unhandledrejection', function (e) {
+        if (!window.__garrison) { fail(e && e.reason && e.reason.message); }
+      });
+      setTimeout(function () {
+        if (!window.__garrison) { fail('The game script did not load.'); }
+      }, 6000);
+    })();
+  </script>
+
   <noscript>
     <div class="screen noscript-screen">
       <div class="panel">
@@ -175,6 +183,6 @@
     </div>
   </noscript>
 
-  <script type="module" src="/js/main.js"></script>
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>

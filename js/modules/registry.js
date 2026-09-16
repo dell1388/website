@@ -21,25 +21,43 @@ export class Registry {
   add(mod) {
     if (!mod || !mod.id) { return; }
     this.mods.push(mod);
-    if (mod.init) { try { mod.init(this.ctx); } catch (e) { console.warn('[module]', mod.id, e); } }
+    this._run(mod, 'init', () => mod.init(this.ctx));
     return mod;
   }
 
   addAll(list) { list.forEach((m) => this.add(m)); return this; }
 
+  /**
+   * A module that throws is dropped rather than allowed to take the frame
+   * loop with it - a broken decoration should never cost you the website.
+   */
+  _run(mod, hook, fn) {
+    if (!mod[hook] || mod.__dead) { return; }
+    try {
+      fn();
+    } catch (e) {
+      mod.__dead = true;
+      console.warn(`[garrison] module "${mod.id}" disabled after an error in ${hook}()`, e);
+    }
+  }
+
   update(dt) {
-    for (const m of this.mods) { if (m.update) { m.update(dt, this.ctx); } }
+    for (const m of this.mods) { this._run(m, 'update', () => m.update(dt, this.ctx)); }
   }
 
   drawWorld(g) {
-    for (const m of this.mods) { if (m.drawWorld) { g.save(); m.drawWorld(g, this.ctx); g.restore(); } }
+    for (const m of this.mods) {
+      this._run(m, 'drawWorld', () => { g.save(); try { m.drawWorld(g, this.ctx); } finally { g.restore(); } });
+    }
   }
 
   drawUI(g) {
-    for (const m of this.mods) { if (m.drawUI) { g.save(); m.drawUI(g, this.ctx); g.restore(); } }
+    for (const m of this.mods) {
+      this._run(m, 'drawUI', () => { g.save(); try { m.drawUI(g, this.ctx); } finally { g.restore(); } });
+    }
   }
 
   emit(event, data) {
-    for (const m of this.mods) { if (m.on) { m.on(event, data, this.ctx); } }
+    for (const m of this.mods) { this._run(m, 'on', () => m.on(event, data, this.ctx)); }
   }
 }

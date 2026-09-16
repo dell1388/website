@@ -1,3 +1,5 @@
+import { load, save } from './storage.js';
+
 /**
  * Procedural audio - no asset files. Everything is synthesised with WebAudio,
  * so new sounds are just new little functions on this class.
@@ -6,7 +8,7 @@ export class Audio {
   constructor() {
     this.ctx = null;
     this.master = null;
-    this.muted = localStorage.getItem('garrison.muted') === '1';
+    this.muted = load('garrison.muted') === '1';
     this.started = false;
     this.engine = null;
   }
@@ -15,20 +17,29 @@ export class Audio {
     if (this.started) { return; }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) { return; }
-    this.ctx = new AC();
-    this.master = this.ctx.createGain();
-    this.master.gain.value = this.muted ? 0 : 0.5;
-    this.master.connect(this.ctx.destination);
-    this.started = true;
-    this._buildEngine();
-    this._ambience();
+    try {
+      this.ctx = new AC();
+      this.master = this.ctx.createGain();
+      this.master.gain.value = this.muted ? 0 : 0.5;
+      this.master.connect(this.ctx.destination);
+      this.started = true;
+      this._buildEngine();
+      this._ambience();
+    } catch (e) {
+      // Some browsers refuse a context outright. Play on in silence.
+      console.warn('[garrison] audio unavailable', e);
+      this.ctx = null;
+      this.master = null;
+      this.engine = null;
+      this.started = true;
+    }
   }
 
   resume() { if (this.ctx && this.ctx.state === 'suspended') { this.ctx.resume(); } }
 
   toggleMute() {
     this.muted = !this.muted;
-    localStorage.setItem('garrison.muted', this.muted ? '1' : '0');
+    save('garrison.muted', this.muted ? '1' : '0');
     if (this.master) {
       this.master.gain.cancelScheduledValues(this.ctx.currentTime);
       this.master.gain.linearRampToValueAtTime(this.muted ? 0 : 0.5, this.ctx.currentTime + 0.15);
