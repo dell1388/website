@@ -7,7 +7,7 @@ open that room's page.
 
 ```
 index.html          the game shell + HUD markup
-classic.html        the old plain card list (still linked, still works)
+classic.html        plain card list, same wooden theme, no scripts
 garrison/
   style.css         all styling: wooden panels, keycaps, overlays
   main.js           wires everything together and runs the frame loop

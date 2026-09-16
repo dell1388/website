@@ -3,8 +3,29 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Games</title>
+  <meta name="description" content="Plain list of the games. No tank required." />
+  <meta name="theme-color" content="#8a5a2e" />
+  <title>Field Notes · Garrison</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%238a5a2e'/><rect x='2' y='7' width='9' height='5' fill='%237c9450'/><rect x='10' y='8' width='5' height='2' fill='%23f6e3bd'/><rect x='2' y='12' width='10' height='2' fill='%233b2a1b'/></svg>" />
   <style>
+    /* Self-contained on purpose: this page is also the fallback when the
+       game will not load, so it must not depend on garrison/style.css. */
+    :root {
+      --ink: #3b2a1b;
+      --cream: #f6e3bd;
+      --cream-2: #efd9ac;
+      --wood: #8a5a2e;
+      --wood-lt: #b3783f;
+      --wood-dk: #5c3a1c;
+      --wood-dkr: #402713;
+      --gold: #e8b44a;
+      --font-pixel: 'Press Start 2P', ui-monospace, 'Courier New', monospace;
+      --font-read: 'VT323', ui-monospace, 'Courier New', monospace;
+    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
@@ -13,76 +34,177 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: #0f0f0f url('/bg.jpg') center/cover no-repeat fixed;
-      font-family: sans-serif;
       gap: 2rem;
-      padding: 2rem;
+      padding: 2.5rem 1.25rem;
+      font-family: var(--font-read);
+      font-size: 20px;
+      color: var(--cream);
+      background: #2b1d10 url('/bg.jpg') center/cover no-repeat fixed;
+      -webkit-font-smoothing: none;
     }
 
+    /* Warm the photo down to the same dusk the game renders in. */
     body::before {
       content: '';
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.62);
       z-index: 0;
+      background:
+        radial-gradient(ellipse at 50% 40%, rgba(90, 58, 26, 0.35), rgba(24, 14, 6, 0.88) 72%),
+        linear-gradient(180deg, rgba(120, 78, 36, 0.35), rgba(24, 14, 6, 0.7));
     }
 
-    h1, .games, footer { position: relative; z-index: 1; }
+    header, main, footer { position: relative; z-index: 1; }
 
-    h1 {
-      color: #f0f0f0;
-      font-size: 1.5rem;
-      letter-spacing: 0.2em;
+    /* ---- title sign, same recipe as the game's wooden panels ---- */
+    header {
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+      padding: 20px 40px 22px;
+      border-radius: 14px;
+      border: 4px solid var(--wood-dkr);
+      background:
+        repeating-linear-gradient(90deg, rgba(0,0,0,0.05) 0 34px, rgba(255,255,255,0.03) 34px 68px),
+        linear-gradient(180deg, var(--wood-lt), var(--wood) 60%, var(--wood-dk));
+      box-shadow: 0 10px 0 rgba(30, 18, 8, 0.45), 0 22px 40px rgba(0, 0, 0, 0.45),
+                  inset 0 0 0 3px rgba(255, 233, 190, 0.28);
+    }
+
+    header h1 {
+      font-family: var(--font-pixel);
+      font-size: clamp(15px, 4vw, 24px);
+      letter-spacing: 0.08em;
+      text-shadow: 0 3px 0 var(--wood-dkr), 0 6px 0 rgba(30, 18, 8, 0.45);
+    }
+
+    header span {
+      font-family: var(--font-pixel);
+      font-size: 7.5px;
+      letter-spacing: 0.24em;
       text-transform: uppercase;
-      opacity: 0.5;
+      color: var(--gold);
     }
 
-    .games { display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center; }
+    /* ---- cards: name only ---- */
+    main {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.1rem;
+      justify-content: center;
+      max-width: 920px;
+    }
 
     a.card {
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-      width: 220px;
-      padding: 1.5rem 1.25rem;
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 8px;
-      background: rgba(15,15,15,0.75);
-      backdrop-filter: blur(6px);
-      color: #f0f0f0;
+      --accent: var(--gold);
+      position: relative;
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      width: 230px;
+      min-height: 96px;
+      padding: 22px 18px;
+      border: 3px solid var(--wood-dkr);
+      border-radius: 12px;
+      background: linear-gradient(180deg, var(--cream), var(--cream-2));
+      color: var(--ink);
       text-decoration: none;
-      transition: border-color 0.15s, background 0.15s;
+      font-family: var(--font-pixel);
+      font-size: 11px;
+      line-height: 1.7;
+      text-align: center;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+      box-shadow: 0 6px 0 rgba(37, 23, 11, 0.5), 0 14px 26px rgba(0, 0, 0, 0.4);
+      transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.15s;
     }
 
-    a.card:hover { border-color: rgba(255,255,255,0.35); background: rgba(25,25,25,0.85); }
-    a.card .name { font-size: 1.1rem; font-weight: 600; }
-    a.card .desc { font-size: 0.8rem; color: #aaa; line-height: 1.4; }
+    /* accent stripe + corner rivets, straight from the HUD panels */
+    a.card::before {
+      content: '';
+      position: absolute;
+      inset: auto 10px 8px;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--accent);
+    }
 
-    footer { font-size: 0.65rem; color: rgba(255,255,255,0.25); text-align: center; line-height: 1.8; }
-    footer a { color: inherit; }
+    a.card::after {
+      content: '';
+      position: absolute;
+      inset: 7px;
+      border-radius: 6px;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 0 0, var(--accent) 2.4px, transparent 2.6px),
+        radial-gradient(circle at 100% 0, var(--accent) 2.4px, transparent 2.6px),
+        radial-gradient(circle at 0 100%, var(--accent) 2.4px, transparent 2.6px),
+        radial-gradient(circle at 100% 100%, var(--accent) 2.4px, transparent 2.6px);
+    }
+
+    a.card:hover, a.card:focus-visible {
+      transform: translateY(-3px);
+      box-shadow: 0 9px 0 rgba(37, 23, 11, 0.5), 0 18px 30px rgba(0, 0, 0, 0.45);
+      filter: brightness(1.04);
+      outline: none;
+    }
+
+    a.card:active {
+      transform: translateY(4px);
+      box-shadow: 0 1px 0 rgba(37, 23, 11, 0.5);
+    }
+
+    /* ---- footer ---- */
+    footer { display: grid; justify-items: center; gap: 14px; text-align: center; }
+
+    .back {
+      font-family: var(--font-pixel);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      color: var(--ink);
+      text-decoration: none;
+      padding: 13px 22px 14px;
+      border: 3px solid var(--wood-dkr);
+      border-radius: 10px;
+      background: linear-gradient(180deg, #ffe9a8, var(--gold) 55%, #c98a25);
+      box-shadow: 0 5px 0 rgba(37, 23, 11, 0.55), 0 10px 18px rgba(0, 0, 0, 0.35);
+      transition: transform 0.08s, box-shadow 0.08s, filter 0.12s;
+    }
+    .back:hover { filter: brightness(1.06); }
+    .back:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(37, 23, 11, 0.55); }
+
+    .credit { font-size: 15px; color: var(--cream); opacity: 0.5; line-height: 1.6; }
+    .credit a { color: var(--gold); }
+
+    @media (max-width: 560px) {
+      body { gap: 1.5rem; padding: 2rem 1rem; }
+      header { padding: 16px 22px 18px; }
+      a.card { width: 100%; max-width: 320px; min-height: 80px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { transition-duration: 0.01ms !important; }
+    }
   </style>
 </head>
 <body>
-  <h1>Games</h1>
-  <div class="games">
-    <a class="card" href="/clockwords/">
-      <span class="name">Word War 3</span>
-      <span class="desc">Type words to fire shells at an armoured column. A military remake of Clockwords.</span>
-    </a>
-    <a class="card" href="/wizardgame/">
-      <span class="name">Aetherfall</span>
-      <span class="desc">A duelling arena for wizards. Bind spells or type incantations to cast them.</span>
-    </a>
-    <a class="card" href="/vehicle-spotter/">
-      <span class="name">Vehicle Spotter</span>
-      <span class="desc">Name the vehicle in the photo. 32 vehicles across five eras.</span>
-    </a>
-  </div>
+  <header>
+    <span>field notes</span>
+    <h1>GARRISON</h1>
+  </header>
+
+  <main>
+    <a class="card" href="/clockwords/" style="--accent:#b0533f">Word War 3</a>
+    <a class="card" href="/wizardgame/" style="--accent:#7a6bd6">Aetherfall</a>
+    <a class="card" href="/vehicle-spotter/" style="--accent:#7d9b4e">Vehicle Spotter</a>
+  </main>
+
   <footer>
-    <a href="/">↰ back to the tank</a><br />
-    Background: <a href="https://commons.wikimedia.org/wiki/File:CV90120.jpg" target="_blank">CV90120</a>
-    by <a href="https://commons.wikimedia.org/wiki/User:Swadim" target="_blank">Swadim</a>,
-    <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank">CC BY-SA 4.0</a>
+    <a class="back" href="/">↰ BACK TO THE TANK</a>
+    <p class="credit">
+      Background: <a href="https://commons.wikimedia.org/wiki/File:CV90120.jpg" target="_blank" rel="noopener">CV90120</a>
+      by <a href="https://commons.wikimedia.org/wiki/User:Swadim" target="_blank" rel="noopener">Swadim</a>,
+      <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>
+    </p>
   </footer>
 </body>
 </html>

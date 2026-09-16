@@ -23,10 +23,10 @@ export function requireCanvas(id) {
 }
 
 const LINKS = [
-  ['/clockwords/', 'Word War 3', 'type words, fire shells'],
-  ['/wizardgame/', 'Aetherfall', 'wizards, duelling'],
-  ['/vehicle-spotter/', 'Vehicle Spotter', 'name the vehicle'],
-  ['/classic.html', 'Field Notes', 'the old plain front page'],
+  ['/clockwords/', 'Word War 3'],
+  ['/wizardgame/', 'Aetherfall'],
+  ['/vehicle-spotter/', 'Vehicle Spotter'],
+  ['/classic.html', 'Field Notes'],
 ];
 
 /**
@@ -43,8 +43,7 @@ export function showFallback(why) {
       '<div class="panel boot-panel"><h2>The tank would not start</h2>' +
       '<p>Something went wrong loading the game. The pages are all still here:</p>' +
       '<ul class="link-list">' +
-      LINKS.map(([href, name, sub]) =>
-        `<li><a href="${href}">${name}</a><em>${sub}</em></li>`).join('') +
+      LINKS.map(([href, name]) => `<li><a href="${href}">${name}</a></li>`).join('') +
       '</ul><p id="bootFailWhy" class="boot-why"></p></div>';
     // Inline styling in case the stylesheet is what went missing.
     panel.style.cssText =

@@ -364,6 +364,8 @@ kbd.wide { min-width: 62px; }
 .screen.hidden { opacity: 0; visibility: hidden; }
 
 .wood-btn {
+  /* a <button> is inline-block, so auto margins only centre it once it is a block */
+  display: block;
   justify-self: center;
   font-family: var(--font-pixel);
   font-size: 11px;
@@ -425,7 +427,7 @@ kbd.wide { min-width: 62px; }
 .link-list li {
   display: grid;
   gap: 1px;
-  padding: 6px 8px;
+  padding: 9px 10px;
   border-radius: 6px;
   background: rgba(140, 96, 48, 0.12);
   border: 1px solid rgba(92, 58, 28, 0.22);
