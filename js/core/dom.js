@@ -55,7 +55,16 @@ export function showFallback(why) {
   }
   panel.classList.remove('hidden');
   const w = el('bootFailWhy');
-  if (w && why) { w.textContent = String((why && why.message) || why).slice(0, 160); }
+  if (!w || !why) { return; }
+  let text = String((why && why.message) || why).slice(0, 160);
+  // The first stack frame tells you which file really threw, which matters
+  // when the page might be serving scripts from somewhere unexpected.
+  const frame = why && why.stack && String(why.stack).split('\n')
+    .map((l) => l.trim())
+    .find((l) => l.includes('.js'));
+  if (frame) { text += `\n${frame.slice(0, 120)}`; }
+  w.style.whiteSpace = 'pre-wrap';
+  w.textContent = text;
 }
 
 /** A one-line nag when the page is missing HUD nodes the scripts expect. */

@@ -13,12 +13,14 @@ export class Minimap {
     this.base = document.createElement('canvas');
     this.base.width = canvas.width;
     this.base.height = canvas.height;
-    this._renderBase();
+    this.ready = !!(this.g && this.base.getContext('2d'));
+    if (this.ready) { this._renderBase(); }
     this.acc = 0;
   }
 
   _renderBase() {
     const g = this.base.getContext('2d');
+    if (!g) { return; }
     const w = this.world, s = this.scale;
     g.clearRect(0, 0, this.base.width, this.base.height);
     for (let ty = 0; ty < w.H; ty++) {
@@ -39,6 +41,7 @@ export class Minimap {
   }
 
   draw(state, dt) {
+    if (!this.ready) { return; }
     this.acc += dt;
     if (this.acc < 1 / 20) { return; }
     this.acc = 0;

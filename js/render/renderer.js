@@ -6,16 +6,31 @@ import { drawDecor, drawProp, drawTarget, drawTank, roundRect } from './sprites.
 export class Renderer {
   constructor(world) {
     this.world = world;
-    this.decals = document.createElement('canvas');
     this.decalScale = 0.25;
-    this.decals.width = Math.ceil(world.pxW * this.decalScale);
-    this.decals.height = Math.ceil(world.pxH * this.decalScale);
-    this.dg = this.decals.getContext('2d');
-    this.dg.fillStyle = 'rgba(58,40,22,0.5)';
+    this.decals = null;
+    this.dg = null;
+    // Tread marks are a nicety. A device that refuses the extra canvas
+    // (low memory, mostly iOS) should still get the game.
+    try {
+      const c = document.createElement('canvas');
+      c.width = Math.ceil(world.pxW * this.decalScale);
+      c.height = Math.ceil(world.pxH * this.decalScale);
+      const dg = c.getContext('2d');
+      if (dg) {
+        dg.fillStyle = 'rgba(58,40,22,0.5)';
+        this.decals = c;
+        this.dg = dg;
+      } else {
+        console.warn('[garrison] no 2D context for the decal layer; skipping tread marks');
+      }
+    } catch (e) {
+      console.warn('[garrison] decal layer unavailable', e);
+    }
   }
 
   /** Tread mark / scorch stamped into the ground layer. */
   stamp(x, y, r, alpha = 0.22, color = '58,40,22') {
+    if (!this.dg) { return; }
     const s = this.decalScale;
     this.dg.globalAlpha = alpha;
     this.dg.fillStyle = `rgba(${color},1)`;
@@ -76,6 +91,7 @@ export class Renderer {
 
     // ground decals (tread marks, scorches) - blit only the visible slice
     const s = this.decalScale;
+    if (!this.decals) { return; }
     const dx0 = Math.max(0, Math.floor(view.x0)), dy0 = Math.max(0, Math.floor(view.y0));
     const dx1 = Math.min(w.pxW, Math.ceil(view.x1)), dy1 = Math.min(w.pxH, Math.ceil(view.y1));
     if (dx1 > dx0 && dy1 > dy0) {

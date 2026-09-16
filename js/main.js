@@ -331,8 +331,13 @@ class Game {
  * fonts arrive late they simply appear - nothing needs to wait for them,
  * and a font CDN that never answers can no longer hold the game hostage.
  */
+export const VERSION = '2026.09.16-3';
+
 const boot = () => {
   try {
+    console.info(
+      `%c[garrison] ${VERSION}%c loaded from ${import.meta.url}`,
+      'color:#e8b44a;font-weight:bold', 'color:inherit');
     window.__garrison = window.game = new Game();
   } catch (err) {
     console.error('[garrison] boot failed', err);
