@@ -140,10 +140,15 @@ export function tickRadar(r, world, dt) {
     // moving it - a lock can't survive a jump like that (nothing physically
     // flew there), so drop it and let search re-acquire normally.
     const warped = target && prev && prev.warpGen !== undefined && prev.warpGen !== target.warpGen;
-    if (target && target.alive && !warped) {
-      const rel = relativeTo(world.own, target);
-      r.antAz = clamp(rel.az, -GIMBAL.azLimit, GIMBAL.azLimit);
-      r.antEl = clamp(rel.el, -GIMBAL.elLimit, GIMBAL.elLimit);
+    const rel = target ? relativeTo(world.own, target) : null;
+    // The gimbal physically cannot point past its own mechanical limits -
+    // if the target has flown outside them, the antenna can't stay on it
+    // and the lock fails, same as a real STT radar losing a target that
+    // outran its gimbal.
+    const outOfGimbal = rel && (Math.abs(rel.az) > GIMBAL.azLimit || Math.abs(rel.el) > GIMBAL.elLimit);
+    if (target && target.alive && !warped && !outOfGimbal) {
+      r.antAz = rel.az;
+      r.antEl = rel.el;
       r.sweepAz = 0; r.barEl = 0;
       const track = { az: rel.az, el: rel.el, rangeKm: rel.rangeKm, altM: target.altM,
                        name: target.name, kind: target.kind, accent: target.accent,

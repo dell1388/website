@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Top-down plot of every contact's true position relative to ownship - no radar in between." />
+<meta name="theme-color" content="#070a05" />
+<title>Garrison World View</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Saira+Condensed:wght@600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css?v=1" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23070a05'/><path d='M8 1v14M1 8h14' stroke='%232dff6a' stroke-width='1.2'/><circle cx='8' cy='8' r='2' fill='%232dff6a'/></svg>" />
+</head>
+<body>
+
+<header>
+  <div class="frame brand">
+    <b>WORLD VIEW</b>
+    <span class="plate">ABSOLUTE POSITION PLOT<br>NOT A RADAR PICTURE</span>
+  </div>
+  <div class="frame state">
+    <div class="cell"><i>sim t</i><b id="wTime">0:00</b></div>
+    <div class="cell"><i>own alt m</i><b id="wAlt">6000</b></div>
+    <div class="cell"><i>own mach</i><b id="wMach">1.20</b></div>
+    <div class="cell"><i>own hdg</i><b id="wHdg">000</b></div>
+    <div class="cell warn"><i>contacts</i><b id="wCount">00</b></div>
+  </div>
+</header>
+
+<main>
+  <div class="frame scope">
+    <span class="cap">TRUE POSITION · NORTH UP · OWNSHIP CENTRED</span>
+    <span class="cap r" id="wScale">AUTO · 60 KM</span>
+    <canvas id="map"></canvas>
+  </div>
+
+  <div class="side">
+    <div class="frame legend">
+      <span class="cap">LEGEND</span>
+      <div class="leg-row"><i class="dot air"></i>air</div>
+      <div class="leg-row"><i class="dot sea"></i>surface</div>
+      <div class="leg-row"><i class="dot gnd"></i>ground</div>
+      <div class="leg-row"><i class="dot own"></i>ownship</div>
+      <div class="leg-row"><i class="dot dim"></i>no-strike / decorative</div>
+    </div>
+    <div class="frame contactlist">
+      <span class="cap">CONTACTS</span>
+      <div id="contactList"></div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="frame group" id="zoomGroup">
+    <span class="cap">SCALE</span>
+  </div>
+  <div class="frame keys">
+    <span class="cap">ABOUT</span>
+    <span>Every object's real position, always - nothing here is gated by a radar mode, gimbal limit, or scan pattern. Useful for seeing what the radar picture is (or isn't) showing.</span>
+    <a class="btn" href="/radar/" style="text-decoration:none;display:inline-block">⇄ RADAR</a>
+    <a class="btn" href="/" style="text-decoration:none;display:inline-block">⇄ TANK</a>
+  </div>
+</footer>
+
+<div id="bootFail">
+  <div class="panel boot-panel">
+    <h2>THE WORLD VIEW WOULD NOT START</h2>
+    <p>Something went wrong loading the plot. The pages are all still here:</p>
+    <ul class="link-list">
+      <li><a href="/radar/">Radar</a></li>
+      <li><a href="/">Tank</a></li>
+    </ul>
+    <p id="bootFailWhy" class="boot-why"></p>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var shown = false;
+    function fail(why) {
+      if (shown) { return; }
+      shown = true;
+      var el = document.getElementById('bootFail');
+      if (el) { el.classList.add('show'); }
+      var w = document.getElementById('bootFailWhy');
+      if (w && why) { w.textContent = String(why).slice(0, 200); }
+    }
+    window.addEventListener('error', function (e) {
+      if (window.__world) { return; }
+      var t = e && e.target;
+      if (t && t !== window && t.tagName === 'SCRIPT') { fail('The world-view script did not load.'); return; }
+      if (t && t !== window) { return; }
+      fail(e && e.message);
+    }, true);
+    window.addEventListener('unhandledrejection', function (e) {
+      if (!window.__world) { fail(e && e.reason && e.reason.message); }
+    });
+    setTimeout(function () { if (!window.__world) { fail('The world view did not start.'); } }, 4000);
+  })();
+</script>
+
+<noscript>
+  <div style="position:fixed;inset:0;display:grid;place-content:center;background:#070a05;color:#2dff6a;font-family:monospace">
+    <div class="panel boot-panel">
+      <h2>NO JAVASCRIPT?</h2>
+      <p>The world view needs it. <a href="/radar/">Try the radar</a> or <a href="/">the tank</a>.</p>
+    </div>
+  </div>
+</noscript>
+
+<script type="module" src="js/main.js?v=1"></script>
+</body>
+</html>

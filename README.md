@@ -215,7 +215,10 @@ so leaving it resting near an old contact never fights a later `TAB`
 press. Locking parks manual gimbal/pipper input entirely: the radar itself
 slaves the antenna straight onto the locked target every tick (see
 `sim/radar.js`), so the display updates smoothly instead of only stepping
-when the beam happens to sweep back over it.
+when the beam happens to sweep back over it - and if the target manoeuvres
+past the gimbal's own mechanical limits (±90° az, ±60° el), the antenna
+physically can't follow and the lock fails, the same as a real single-
+target-track radar losing a contact that outran its gimbal.
 
 Two things worth knowing if you're editing the sim:
 
@@ -229,6 +232,28 @@ Two things worth knowing if you're editing the sim:
   number.** Tuning `engine/profiles.js` (thrust, fuel, `clMax`, `maxG`)
   changes what's actually reachable - see the intercept cue for whether a
   given shot is realistic before assuming a target's placement is wrong.
+
+## The world view (`/radarworld/`)
+
+A plain top-down plot of every contact's *true* position relative to
+ownship - no radar set in between. It imports `radar/js/sim/world.js`
+directly (the same simulated world the radar page runs, not a
+reimplementation) and draws it straight: north up, ownship fixed at
+centre, every contact plotted by its real position regardless of mode,
+gimbal limit, or scan pattern. Useful as ground truth when you're not sure
+whether the radar picture is wrong or the sim is.
+
+```
+radarworld/
+  index.html   the shell + HUD
+  style.css    same phosphor-green panel language as the radar page
+  js/main.js   ticks the same world, draws the plot, nothing else
+```
+
+It's a separate, independent world instance - opening it doesn't share
+live state with an already-open radar tab (there's no backend to share it
+over), just the same deterministic starting conditions. `SCALE` picks a
+fixed view radius or auto-fits to whatever's currently furthest out.
 
 ### Plane or tank?
 
