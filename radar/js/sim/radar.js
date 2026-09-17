@@ -17,7 +17,7 @@ export function createRadar() {
     modeIndex: 1, scaleIndex: 3, patternIndex: 2,   // TWS, 100km, 60x10
     antAz: 0, antEl: -5,
     sweepAz: 0, sweepDir: 1, barIndex: 0, barEl: 0,
-    pipperAz: 0, pipperEl: -5,
+    pipperAz: 0, pipperRangeKm: 25,
     blips: new Map(),       // id -> { az, el, rangeKm, altM, name, kind, t }
     tracks: new Map(),      // id -> { ...blip fields, vAz, vEl, vRange, lastPaint }
     selectedId: null,
@@ -30,43 +30,77 @@ export const mode = (r) => MODES[r.modeIndex];
 export const scaleKm = (r) => SCALES_KM[r.scaleIndex];
 export const pattern = (r) => PATTERNS[r.patternIndex];
 
+/**
+ * Keep the antenna such that its whole scan box (antAz +/- pattern.az,
+ * antEl +/- pattern.el) sits inside the gimbal's mechanical limits - the
+ * box must never be even partially off the B/C-scope. Every pattern's
+ * half-angle is comfortably smaller than the gimbal limit on both axes, so
+ * this range is never empty.
+ */
+function clampToScanBox(r) {
+  const pat = pattern(r);
+  r.antAz = clamp(r.antAz, -(GIMBAL.azLimit - pat.az), GIMBAL.azLimit - pat.az);
+  r.antEl = clamp(r.antEl, -(GIMBAL.elLimit - pat.el), GIMBAL.elLimit - pat.el);
+}
+
 export function setMode(r, i) {
   r.modeIndex = clamp(i, 0, MODES.length - 1);
   r.blips.clear(); r.tracks.clear();
   r.selectedId = null; r.lockedId = null;
   r.barIndex = 0; r.sweepAz = 0; r.sweepDir = 1;
 }
-export function setScale(r, i) { r.scaleIndex = clamp(i, 0, SCALES_KM.length - 1); }
+export function setScale(r, i) {
+  r.scaleIndex = clamp(i, 0, SCALES_KM.length - 1);
+  r.pipperRangeKm = clamp(r.pipperRangeKm, 0, scaleKm(r));
+}
 export function setPattern(r, i) {
   r.patternIndex = clamp(i, 0, PATTERNS.length - 1);
   r.barIndex = 0; r.sweepAz = 0; r.sweepDir = 1;
+  clampToScanBox(r);   // a wider pattern can make the current antenna position invalid
+}
+
+/** ALT+A: snap the antenna back to dead ahead, level. */
+export function centerGimbal(r) {
+  r.antAz = 0; r.antEl = 0;
+  clampToScanBox(r);
 }
 
 /** Move the gimbal (antenna centre) by a slew rate over dt, from input axes
- *  in [-1, 1] for az (right positive) and el (up positive). */
+ *  in [-1, 1] for az (right positive) and el (up positive). Clamped so the
+ *  whole scan box - not just the centre - always stays on the B/C-scope. */
 export function slewGimbal(r, azAxis, elAxis, dt) {
-  r.antAz = clamp(r.antAz + azAxis * GIMBAL.slewDegPerSec * dt, -GIMBAL.azLimit, GIMBAL.azLimit);
-  r.antEl = clamp(r.antEl + elAxis * GIMBAL.slewDegPerSec * dt, -GIMBAL.elLimit, GIMBAL.elLimit);
+  r.antAz += azAxis * GIMBAL.slewDegPerSec * dt;
+  r.antEl += elAxis * GIMBAL.slewDegPerSec * dt;
+  clampToScanBox(r);
 }
 
-/** Move the pipper (selection reticle) the same way, but independently of
- *  the antenna and free to roam the whole gimbal envelope. */
-export function movePipper(r, azAxis, elAxis, dt) {
+/** Move the pipper (selection reticle) on the B-scope's own axes - azimuth
+ *  and range - independently of the antenna, free to roam the whole gimbal
+ *  azimuth envelope and the current scale's full range. */
+export function movePipper(r, azAxis, rangeAxis, dt) {
   r.pipperAz = clamp(r.pipperAz + azAxis * PIPPER.slewDegPerSec * dt, -GIMBAL.azLimit, GIMBAL.azLimit);
-  r.pipperEl = clamp(r.pipperEl + elAxis * PIPPER.slewDegPerSec * dt, -GIMBAL.elLimit, GIMBAL.elLimit);
+  const maxR = scaleKm(r);
+  r.pipperRangeKm = clamp(
+    r.pipperRangeKm + rangeAxis * maxR * PIPPER.slewRangeFractionPerSec * dt, 0, maxR);
 }
 
 /**
  * Whatever live track sits closest to the pipper "grabs" the selection.
- * If nothing is within range of it, the existing selection (however it got
- * there - TAB or an earlier pipper pass) is left alone rather than cleared,
- * so drifting the reticle through a gap doesn't cost you your pick.
+ * Azimuth and range live in different units, so closeness is each error as
+ * a fraction of its own threshold, combined - both have to be reasonably
+ * small at once, not just one of them. If nothing qualifies, the existing
+ * selection (however it got there - TAB or an earlier pipper pass) is left
+ * alone rather than cleared, so drifting the reticle through a gap doesn't
+ * cost you your pick.
  */
 export function updatePipperSelection(r) {
-  let bestId = null, bestDist = PIPPER.selectRadiusDeg;
+  const rangeThreshold = Math.max(1, scaleKm(r) * PIPPER.selectRangeFraction);
+  let bestId = null, bestScore = 1;
   for (const [id, t] of r.tracks) {
-    const d = Math.hypot(wrapDeg(t.az - r.pipperAz), t.el - r.pipperEl);
-    if (d < bestDist) { bestDist = d; bestId = id; }
+    const azErr = Math.abs(wrapDeg(t.az - r.pipperAz)) / PIPPER.selectRadiusDeg;
+    const rngErr = Math.abs(t.rangeKm - r.pipperRangeKm) / rangeThreshold;
+    const score = Math.hypot(azErr, rngErr);
+    if (score < bestScore) { bestScore = score; bestId = id; }
   }
   if (bestId) { r.selectedId = bestId; }
 }
@@ -89,43 +123,67 @@ function stepBar(r, pat) {
     : -pat.el + (r.barIndex + 0.5) * (2 * pat.el / pat.bars);
 }
 
-/** One radar tick: sweep the beam, paint contacts it crosses, age out
- *  blips and stale tracks, and dead-reckon live tracks forward. */
+/** One radar tick. Unlocked: sweep the beam, paint contacts it crosses, age
+ *  out blips and stale tracks, and dead-reckon live tracks forward between
+ *  revisits. Locked: this is single-target-track behaviour, not search -
+ *  the scan stops entirely and the antenna slaves straight onto the locked
+ *  contact's true position every tick, so its track updates smoothly
+ *  instead of only stepping when the beam happens to sweep back over it. */
 export function tickRadar(r, world, dt) {
-  advanceSweep(r, dt);
-  const m = mode(r);
-  const beam = beamPos(r);
-  const maxRange = scaleKm(r);
   const now = world.time;
 
-  for (const c of world.contacts) {
-    if (!c.alive || !m.kinds.includes(c.kind)) { continue; }
-    const rel = relativeTo(world.own, c);
-    if (rel.rangeKm > maxRange) { continue; }
-    if (Math.abs(wrapDeg(rel.az - beam.az)) > BEAM_HALF_AZ) { continue; }
-    if (Math.abs(rel.el - beam.el) > BEAM_HALF_EL) { continue; }
+  if (r.lockedId) {
+    const target = world.contacts.find((c) => c.id === r.lockedId);
+    if (target && target.alive) {
+      const rel = relativeTo(world.own, target);
+      r.antAz = clamp(rel.az, -GIMBAL.azLimit, GIMBAL.azLimit);
+      r.antEl = clamp(rel.el, -GIMBAL.elLimit, GIMBAL.elLimit);
+      r.sweepAz = 0; r.barEl = 0;
+      const track = { az: rel.az, el: rel.el, rangeKm: rel.rangeKm, altM: target.altM,
+                       name: target.name, kind: target.kind, accent: target.accent,
+                       locked: target.locked, href: target.href, t: now,
+                       lastPaint: now, vAz: 0, vEl: 0, vRange: 0 };
+      r.tracks.set(target.id, track);
+      r.blips.set(target.id, { ...track });
+    } else {
+      r.lockedId = null;
+    }
+  } else {
+    advanceSweep(r, dt);
+    const m = mode(r);
+    const beam = beamPos(r);
+    const maxRange = scaleKm(r);
 
-    const paint = { az: rel.az, el: rel.el, rangeKm: rel.rangeKm, altM: c.altM,
-                     name: c.name, kind: c.kind, accent: c.accent,
-                     locked: c.locked, href: c.href, t: now };
-    r.blips.set(c.id, paint);
+    for (const c of world.contacts) {
+      if (!c.alive || !m.kinds.includes(c.kind)) { continue; }
+      const rel = relativeTo(world.own, c);
+      if (rel.rangeKm > maxRange) { continue; }
+      if (Math.abs(wrapDeg(rel.az - beam.az)) > BEAM_HALF_AZ) { continue; }
+      if (Math.abs(rel.el - beam.el) > BEAM_HALF_EL) { continue; }
 
-    if (m.tws) {
-      const prev = r.tracks.get(c.id);
-      const track = { ...paint, lastPaint: now, vAz: 0, vEl: 0, vRange: 0 };
-      if (prev) {
-        const ddt = Math.max(0.05, now - prev.lastPaint);
-        track.vAz = wrapDeg(rel.az - prev.az) / ddt;
-        track.vEl = (rel.el - prev.el) / ddt;
-        track.vRange = (rel.rangeKm - prev.rangeKm) / ddt;
+      const paint = { az: rel.az, el: rel.el, rangeKm: rel.rangeKm, altM: c.altM,
+                       name: c.name, kind: c.kind, accent: c.accent,
+                       locked: c.locked, href: c.href, t: now };
+      r.blips.set(c.id, paint);
+
+      if (m.tws) {
+        const prev = r.tracks.get(c.id);
+        const track = { ...paint, lastPaint: now, vAz: 0, vEl: 0, vRange: 0 };
+        if (prev) {
+          const ddt = Math.max(0.05, now - prev.lastPaint);
+          track.vAz = wrapDeg(rel.az - prev.az) / ddt;
+          track.vEl = (rel.el - prev.el) / ddt;
+          track.vRange = (rel.rangeKm - prev.rangeKm) / ddt;
+        }
+        r.tracks.set(c.id, track);
       }
-      r.tracks.set(c.id, track);
     }
   }
 
   for (const [id, b] of r.blips) { if (now - b.t > BLIP_FADE_SEC) { r.blips.delete(id); } }
 
   for (const [id, t] of r.tracks) {
+    if (id === r.lockedId) { continue; }   // already updated live, above
     const age = now - t.lastPaint;
     if (age > TRACK_COAST_SEC) {
       r.tracks.delete(id);

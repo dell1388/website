@@ -27,11 +27,15 @@ export const GIMBAL = {
   slewDegPerSec: 70,        // arrow-key slew rate
 };
 
-/** The WASD-driven selection reticle - independent of the antenna, and free
- *  to roam the whole gimbal envelope regardless of the current scan box. */
+/** The selection reticle - independent of the antenna, living on the
+ *  B-scope's own axes (azimuth, range) rather than the antenna's (az, el),
+ *  and free to roam the whole gimbal envelope / current scale regardless
+ *  of where the antenna's scan box currently is. */
 export const PIPPER = {
   slewDegPerSec: 85,
-  selectRadiusDeg: 6,       // how close it has to sit to a track to grab it
+  slewRangeFractionPerSec: 0.4,   // fraction of the current scale, per second
+  selectRadiusDeg: 6,             // how close (az) it has to sit to grab a track
+  selectRangeFraction: 0.07,      // how close (range, as a fraction of scale)
 };
 
 /** Beam sweep speed in degrees/second of azimuth travel. */

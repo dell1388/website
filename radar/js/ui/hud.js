@@ -83,10 +83,13 @@ function renderStores(ammo) {
   root.innerHTML = Object.values(MISSILES).map((w) => {
     const total = LOADOUT[w.id];
     const left = ammo[w.id];
-    const pips = Array.from({ length: total }, (_, i) =>
-      `<i class="${i < left ? '' : 'spent'}"></i>`).join('');
-    return `<div class="st${left > 0 ? ' on' : ''}">
-      <span class="w">${w.label}</span><span class="rail">${pips}</span><span class="q">${left}</span>
+    const unlimited = !isFinite(total);
+    const rail = unlimited
+      ? '<i class="infinite">∞</i>'
+      : Array.from({ length: total }, (_, i) => `<i class="${i < left ? '' : 'spent'}"></i>`).join('');
+    return `<div class="st${(unlimited || left > 0) ? ' on' : ''}">
+      <span class="w">${w.label}</span><span class="rail">${rail}</span>
+      <span class="q">${unlimited ? '∞' : left}</span>
     </div>`;
   }).join('');
 }

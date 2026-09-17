@@ -1,6 +1,6 @@
 import { buildWorld, tickWorld } from './sim/world.js';
 import { createRadar, mode, setMode, setScale, setPattern, slewGimbal,
-         movePipper, updatePipperSelection,
+         movePipper, updatePipperSelection, centerGimbal,
          tickRadar, stepSelection, toggleLock } from './sim/radar.js';
 import { WEAPON_BY_KIND } from '../content/targets.js';
 import { LOADOUT } from './sim/weapons.js';
@@ -24,6 +24,7 @@ class Game {
     this.ammo = { ...LOADOUT };
     this.input = new Input();
     this.dossier = buildDossier();
+    this.controlsSwapped = false;   // false: arrows=gimbal, WASD=pipper
     this.canvasB = document.getElementById('bscope');
     this.canvasC = document.getElementById('cscope');
     this.canvasE = document.getElementById('escope');
@@ -36,18 +37,21 @@ class Game {
     });
 
     document.getElementById('dosClose')?.addEventListener('click', () => this.dossier?.toggle(false));
+    document.getElementById('swapBtn')?.addEventListener('click', (e) => { this._toggleSwap(); e.currentTarget.blur(); });
     addEventListener('keydown', (e) => {
       if (e.code === 'Escape' && this.dossier?.isOpen()) { this.dossier.toggle(false); }
-      // Not KeyD: D also drives the pipper right, and every WASD tap would
-      // otherwise flip the dossier open. Slash ('/', as in "?" for help).
+      // Not KeyD: D also drives the pipper (or, swapped, the gimbal) right,
+      // and every WASD tap would otherwise flip the dossier open.
+      // Slash ('/', as in "?" for help).
       if (e.code === 'Slash') { this.dossier?.toggle(); }
 
-      // Alt+letter cycles a setting one step - arrows stay reserved for the
-      // gimbal and WASD for the pipper, so these live on the modifier.
+      // Alt+letter is a one-shot action - arrows/WASD stay reserved for the
+      // gimbal and pipper (whichever way round), so these live on Alt.
       if (!e.altKey) { return; }
       if (e.code === 'KeyG') { e.preventDefault(); this._cycleMode(); }
       else if (e.code === 'KeyS') { e.preventDefault(); this._cycleScale(); }
       else if (e.code === 'KeyF') { e.preventDefault(); this._cyclePattern(); }
+      else if (e.code === 'KeyA') { e.preventDefault(); this._centerScan(); }
     });
 
     this.last = performance.now();
@@ -67,6 +71,19 @@ class Game {
   _cyclePattern() {
     setPattern(this.radar, (this.radar.patternIndex + 1) % PATTERNS.length);
     toast(PATTERNS[this.radar.patternIndex].label);
+  }
+
+  _centerScan() {
+    centerGimbal(this.radar);
+    toast('SCAN CENTRED');
+  }
+
+  _toggleSwap() {
+    this.controlsSwapped = !this.controlsSwapped;
+    const btn = document.getElementById('swapBtn');
+    btn?.classList.toggle('on', this.controlsSwapped);
+    relabelControls(this.controlsSwapped);
+    toast(this.controlsSwapped ? 'ARROWS = PIPPER · WASD = GIMBAL' : 'ARROWS = GIMBAL · WASD = PIPPER', 'good');
   }
 
   _makeFlash() {
@@ -90,14 +107,23 @@ class Game {
   _tick(dt) {
     const { input, world, radar } = this;
 
-    slewGimbal(radar, input.axis('ArrowLeft', 'ArrowRight'), input.axis('ArrowDown', 'ArrowUp'), dt);
-    const pipAz = input.axis('KeyA', 'KeyD'), pipEl = input.axis('KeyS', 'KeyW');
-    if (pipAz || pipEl) {
-      movePipper(radar, pipAz, pipEl, dt);
-      // Only claim the selection while the pipper is actually being steered -
-      // otherwise a pipper left resting near an old contact would silently
-      // fight a later TAB press every single frame.
-      updatePipperSelection(radar);
+    const arrowAz = input.axis('ArrowLeft', 'ArrowRight'), arrowV = input.axis('ArrowDown', 'ArrowUp');
+    const wasdAz = input.axis('KeyA', 'KeyD'), wasdV = input.axis('KeyS', 'KeyW');
+    const [gimbalAz, gimbalEl] = this.controlsSwapped ? [wasdAz, wasdV] : [arrowAz, arrowV];
+    const [pipAz, pipRange] = this.controlsSwapped ? [arrowAz, arrowV] : [wasdAz, wasdV];
+
+    // Once locked, the radar itself slaves the antenna onto the target (see
+    // tickRadar) - manual gimbal/pipper input is parked so it can't fight
+    // that single-target-track behaviour.
+    if (!radar.lockedId) {
+      slewGimbal(radar, gimbalAz, gimbalEl, dt);
+      if (pipAz || pipRange) {
+        movePipper(radar, pipAz, pipRange, dt);
+        // Only claim the selection while the pipper is actually being
+        // steered - otherwise a pipper left resting near an old contact
+        // would silently fight a later TAB press every single frame.
+        updatePipperSelection(radar);
+      }
     }
 
     const hadLock = radar.lockedId;
@@ -105,7 +131,7 @@ class Game {
     tickRadar(radar, world, dt);
     if (hadLock && !radar.lockedId) { toast('LOCK LOST', 'deny'); }
 
-    if (input.hit('Tab')) { stepSelection(radar); }
+    if (input.hit('Tab') && !radar.lockedId) { stepSelection(radar); }
     if (input.hit('Enter')) {
       const r = toggleLock(radar, world);
       if (r === 'locked') { toast('LOCK · ' + radar.tracks.get(radar.lockedId).name, 'good'); }
@@ -118,7 +144,10 @@ class Game {
       if (!m.alive) { continue; }
       tickMissile(world, m, dt);
       if (m.hit) { this._resolveHit(m); }
-      else if (!m.alive) { toast('MISSILE LOST · ' + (world.contacts.find((c) => c.id === m.targetId)?.name || 'target'), 'deny'); }
+      else if (!m.alive) {
+        const name = world.contacts.find((c) => c.id === m.targetId)?.name || 'target';
+        toast((m.expired ? 'SELF-DESTRUCT · ' : 'MISSILE LOST · ') + name, 'deny');
+      }
     }
     this.missiles = this.missiles.filter((m) => m.alive);
 
@@ -158,6 +187,13 @@ class Game {
 }
 
 function radarLockedOnThis(radar, id) { return radar.lockedId === id; }
+
+function relabelControls(swapped) {
+  const set = (id, text) => { const el = document.getElementById(id); if (el) { el.textContent = text; } };
+  set('hintArrowAz', swapped ? 'pipper az' : 'antenna az');
+  set('hintArrowV', swapped ? 'pipper range' : 'antenna el');
+  set('hintWasd', swapped ? 'antenna' : 'pipper');
+}
 
 let booted = false;
 function boot() {

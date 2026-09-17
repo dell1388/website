@@ -93,7 +93,10 @@ export const TARGETS = [
   },
 ];
 
-/** Decorative practice contacts - lockable and shootable, open nothing. */
+/** Decorative practice contacts - lockable and shootable, open nothing. They
+ *  have no `href`, so a kill just marks them destroyed with nowhere to go -
+ *  the world sim revives and re-places them rather than leaving air contacts
+ *  permanently short a target. */
 export const BOGEYS = [
   // Placed so it sits inside the default antenna box (TWS, 60x10, boresight
   // dead ahead) the instant the page loads - the beam's own idle sweep finds

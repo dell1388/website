@@ -99,6 +99,11 @@ canvas{display:block;width:100%;height:100%}
 .st .rail i{width:7px;height:13px;background:var(--p-dim);border-radius:1px;display:block}
 .st.on .rail i{background:var(--amber);box-shadow:0 0 7px rgba(255,176,0,.7)}
 .st .rail i.spent{background:transparent;border:1px solid var(--p-dim);box-shadow:none}
+.st .rail i.infinite{
+  width:auto;height:auto;background:none;color:var(--amber);
+  font-family:var(--pix);font-weight:700;font-size:15px;line-height:1;
+  text-shadow:0 0 7px rgba(255,176,0,.7);
+}
 /* ---------- footer controls ---------- */
 footer{display:grid;grid-template-columns:auto auto auto 1fr;gap:8px;align-items:stretch}
 .group{padding:20px 9px 9px;display:flex;gap:4px;align-items:center;flex-wrap:wrap}

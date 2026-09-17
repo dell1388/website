@@ -1,4 +1,4 @@
-import { MISSILES, FUZE_RADIUS_M, MAX_FLIGHT_DISTANCE_M } from './weapons.js';
+import { MISSILES, FUZE_RADIUS_M } from './weapons.js';
 import { DEG, RAD, wrapDeg, clamp } from '../core/rng.js';
 import { relativeTo } from './world.js';
 
@@ -33,7 +33,7 @@ export function launchMissile(world, weaponId, target) {
     pitchDeg: rel.el,
     speed: w.launchMps,
     t: 0, distanceM: 0,
-    alive: true, hit: false,
+    alive: true, hit: false, expired: false,
   };
 }
 
@@ -41,6 +41,11 @@ export function launchMissile(world, weaponId, target) {
 export function tickMissile(world, m, dt) {
   if (!m.alive) { return; }
   m.t += dt;
+
+  // Range, modelled as a flight-time limit (motor/fuel burn) rather than a
+  // distance - still going when the clock runs out means a self-destruct,
+  // not a hit.
+  if (m.t > m.w.maxFlightSec) { m.alive = false; m.expired = true; return; }
 
   // --- speed profile: boost, then ease onto the cruise speed ---
   if (m.t <= m.w.boostSec) {
@@ -79,9 +84,6 @@ export function tickMissile(world, m, dt) {
   const missDist = pointToSegmentDist3D(
     target.x, target.y, target.altM, oldX, oldY, oldAlt, m.x, m.y, m.altM);
   if (missDist < FUZE_RADIUS_M) { m.alive = false; m.hit = true; return; }
-  // Not a range limit (there isn't one) - a safety valve against a round
-  // that can genuinely never catch its target flying forever. See weapons.js.
-  if (m.distanceM > MAX_FLIGHT_DISTANCE_M) { m.alive = false; return; }
 }
 
 /** Missile's own range/az/el from the ownship, for drawing on the scopes. */

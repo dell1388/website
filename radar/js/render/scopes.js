@@ -113,11 +113,6 @@ export function drawB(cv, world, radar, missiles, terrain, time) {
   g.strokeStyle = 'rgba(196,255,214,.9)'; g.lineWidth = 1.5;
   g.beginPath(); g.moveTo(bx, 0); g.lineTo(bx, h); g.stroke();
 
-  // pipper cross-reference: just its azimuth, for continuity with the C-scope
-  g.strokeStyle = 'rgba(234,255,245,.55)'; g.setLineDash([2, 3]); g.lineWidth = 1.2;
-  g.beginPath(); g.moveTo(X(radar.pipperAz), 0); g.lineTo(X(radar.pipperAz), h); g.stroke();
-  g.setLineDash([]);
-
   drawContacts(g, radar, world.time, X, Y, (c) => c.az, (c) => c.rangeKm, true);
 
   for (const m of missiles) {
@@ -130,12 +125,13 @@ export function drawB(cv, world, radar, missiles, terrain, time) {
   // ownship
   g.strokeStyle = 'rgba(196,255,214,.9)'; g.lineWidth = 2;
   g.beginPath(); g.moveTo(X(0) - 9, h - 1); g.lineTo(X(0), h - 13); g.lineTo(X(0) + 9, h - 1); g.stroke();
+
+  // the pipper lives here - same axes as everything else on this scope
+  drawPipper(g, X(radar.pipperAz), Y(radar.pipperRangeKm));
 }
 
 /* ------------------------------------------------------------ C-SCOPE */
-/* x = azimuth, y = elevation - the whole gimbal envelope. This is the
- * pipper's home view: a straight az/el plot, exactly what a crosshair
- * reticle wants. */
+/* x = azimuth, y = elevation - the whole gimbal envelope. */
 export function drawC(cv, world, radar, missiles, time) {
   const { g, w, h } = fit(cv);
   g.clearRect(0, 0, w, h);
@@ -163,7 +159,11 @@ export function drawC(cv, world, radar, missiles, time) {
     drawMissile(g, X(rel.az), Y(rel.el), m, world);
   }
 
-  drawPipper(g, X(radar.pipperAz), Y(radar.pipperEl));
+  // pipper cross-reference: just its azimuth (it has no elevation of its
+  // own now - it lives on the B-scope's az/range axes).
+  g.strokeStyle = 'rgba(234,255,245,.5)'; g.setLineDash([2, 3]); g.lineWidth = 1.1;
+  g.beginPath(); g.moveTo(X(radar.pipperAz), 0); g.lineTo(X(radar.pipperAz), h); g.stroke();
+  g.setLineDash([]);
 
   label(g, '-90', 4, h - 6, P.greenDim); label(g, '+90', w - 30, h - 6, P.greenDim); label(g, '+60', 4, 14, P.greenDim);
 }
@@ -183,12 +183,42 @@ export function drawE(cv, world, radar, missiles, time) {
   const ownAlt = world.own.altM;
   const X = (rn) => Math.min(1, rn / maxR) * w;
   const Y = (altM) => h - Math.min(1, Math.max(0, (altM - ALT_MIN) / (ALT_MAX - ALT_MIN))) * h;
-  const pivotAlt = (angleDeg, rangeKm) => ownAlt + rangeKm * 1000 * Math.tan(angleDeg * DEG);
+
+  // A fixed elevation angle traces altitude = ownAlt + range*tan(angle) - a
+  // straight line through the pivot at (range 0, ownAlt). Pointed steeply at
+  // the ground or the sky, that line legitimately runs off the top or
+  // bottom of this scope's altitude window before reaching max range -
+  // unlike the B/C-scope's scan box (kept fully on-screen by clamping the
+  // gimbal itself), the E-scope's box is EXPECTED to go off-screen and has
+  // to be clipped accurately there rather than smeared into a wrong shape.
+  const altAtRange = (angleDeg, rangeKm) => ownAlt + rangeKm * 1000 * Math.tan(angleDeg * DEG);
+  /** Where this radial actually leaves the visible altitude window, if it
+   *  does before maxR - the true crossing point, not a distorted guess. */
+  const clipRadial = (angleDeg) => {
+    const endAlt = altAtRange(angleDeg, maxR);
+    if (endAlt >= ALT_MIN && endAlt <= ALT_MAX) { return { rKm: maxR, alt: endAlt, offScope: false }; }
+    const targetAlt = endAlt > ALT_MAX ? ALT_MAX : ALT_MIN;
+    const tanA = Math.tan(angleDeg * DEG);          // guaranteed meaningfully nonzero here
+    const rKm = (targetAlt - ownAlt) / (1000 * tanA);
+    return { rKm: Math.min(maxR, Math.max(0, rKm)), alt: targetAlt, offScope: true };
+  };
   const radial = (angleDeg, color, dash) => {
+    const end = clipRadial(angleDeg);
     g.strokeStyle = color;
     if (dash) { g.setLineDash(dash); }
-    g.beginPath(); g.moveTo(X(0), Y(ownAlt)); g.lineTo(X(maxR), Y(pivotAlt(angleDeg, maxR))); g.stroke();
+    g.beginPath(); g.moveTo(X(0), Y(ownAlt)); g.lineTo(X(end.rKm), Y(end.alt)); g.stroke();
     if (dash) { g.setLineDash([]); }
+    if (end.offScope) {
+      // small chevron at the true exit point, pointing the way it keeps
+      // going - makes "this leaves the scope here" unambiguous rather than
+      // reading as "the beam just stops."
+      const dir = end.alt >= ALT_MAX ? -1 : 1;
+      const ex = X(end.rKm), ey = Y(end.alt);
+      g.fillStyle = color;
+      g.beginPath();
+      g.moveTo(ex, ey + dir * 7); g.lineTo(ex - 4, ey + dir * 2); g.lineTo(ex + 4, ey + dir * 2);
+      g.closePath(); g.fill();
+    }
   };
 
   grid(g, w, h, 8, 4);
@@ -243,6 +273,11 @@ export function drawE(cv, world, radar, missiles, time) {
     if (rel.rangeKm > maxR) { continue; }
     drawMissile(g, X(rel.rangeKm), Y(m.altM), m, world);
   }
+
+  // pipper cross-reference: just its range, the axis this scope shares with it
+  g.strokeStyle = 'rgba(234,255,245,.5)'; g.setLineDash([2, 3]); g.lineWidth = 1.1;
+  g.beginPath(); g.moveTo(X(radar.pipperRangeKm), 0); g.lineTo(X(radar.pipperRangeKm), h); g.stroke();
+  g.setLineDash([]);
 }
 
 /* ------------------------------------------------------------ shared */
