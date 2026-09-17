@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Radar · mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Share+Tech+Mono&family=Saira+Condensed:wght@600;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#070a05; --panel:#121710; --panel-2:#1a2116;
+  --edge:#33412a; --edge-hi:#5a6f44;
+  --p:#2dff6a;            /* phosphor - bright radar green */
+  --p-dim:#1a8a3c;
+  --p-bright:#c4ffd6;
+  --amber:#ffb000;
+  --red:#ff3b2f;
+  --ink:#03140a;
+  --scope:#040f07;
+  --pix:'Saira Condensed',Impact,sans-serif;
+  --read:'Share Tech Mono',ui-monospace,monospace;
+  --stencil:'Black Ops One',Impact,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{
+  background:
+    repeating-linear-gradient(135deg, rgba(255,255,255,.012) 0 3px, transparent 3px 7px),
+    linear-gradient(180deg,#0b1007,#070a05);
+  color:var(--p); font-family:var(--read); font-size:17px; letter-spacing:.02em;
+  display:grid; grid-template-rows:auto auto 1fr auto; gap:7px; padding:9px;
+}
+/* hazard stripe under the header - the loud military tell */
+.hazard{
+  height:14px;border:1px solid var(--edge);border-radius:2px;
+  background:repeating-linear-gradient(45deg,#463200 0 13px,#0d1108 13px 26px);
+  position:relative;overflow:hidden;
+}
+.hazard::after{
+  content:'RESTRICTED  ·  WEAPON SYSTEM ARMED  ·  RESTRICTED  ·  WEAPON SYSTEM ARMED  ·  RESTRICTED  ·  WEAPON SYSTEM ARMED  ·  RESTRICTED  ·  WEAPON SYSTEM ARMED  ·  ';
+  position:absolute;inset:0;white-space:nowrap;font-family:var(--read);font-size:10px;
+  letter-spacing:.34em;color:rgba(255,200,90,.8);line-height:14px;
+  text-shadow:0 0 6px rgba(0,0,0,.9),0 1px 0 #000;
+  animation:crawl 34s linear infinite;
+}
+@keyframes crawl{to{transform:translateX(-50%)}}
+/* ---------- CRT dressing ---------- */
+body::after{
+  content:''; position:fixed; inset:0; z-index:50; pointer-events:none;
+  background:
+    repeating-linear-gradient(0deg, rgba(0,0,0,.28) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at 50% 45%, rgba(45,255,106,.07), transparent 60%),
+    radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,.65) 100%);
+  mix-blend-mode:normal;
+}
+.frame{
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.015) 0 1px, transparent 1px 4px),
+    linear-gradient(180deg,var(--panel-2),var(--panel));
+  border:2px solid var(--edge); border-radius:3px;
+  box-shadow:inset 0 1px 0 rgba(200,230,170,.10), inset 0 0 26px rgba(0,0,0,.85),
+             0 2px 0 rgba(0,0,0,.6);
+  position:relative;
+}
+/* panel screws, one per corner */
+.frame::before{
+  content:''; position:absolute; inset:4px; pointer-events:none; z-index:3;
+  background:
+    radial-gradient(circle at 0 0, #6d7f59 1.7px, transparent 2px),
+    radial-gradient(circle at 100% 0, #6d7f59 1.7px, transparent 2px),
+    radial-gradient(circle at 0 100%, #6d7f59 1.7px, transparent 2px),
+    radial-gradient(circle at 100% 100%, #6d7f59 1.7px, transparent 2px);
+  opacity:.75;
+}
+.frame > .cap{
+  position:absolute; top:5px; left:9px; z-index:4;
+  font-family:var(--pix); font-weight:700; font-size:10px; letter-spacing:.22em;
+  text-transform:uppercase; color:var(--p-dim);
+}
+.frame > .cap.r{left:auto;right:8px}
+/* ---------- header ---------- */
+header{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:stretch}
+.brand{display:flex;align-items:center;gap:13px;padding:8px 14px}
+.brand b{font-family:var(--stencil);font-size:20px;color:var(--p-bright);letter-spacing:.06em;
+  text-shadow:0 0 14px rgba(45,255,106,.45)}
+.plate{
+  font-family:var(--read);font-size:9px;line-height:1.5;letter-spacing:.14em;color:var(--p-dim);
+  border-left:1px solid var(--edge);padding-left:12px;text-transform:uppercase;
+}
+.state{display:flex;gap:0;align-items:stretch;overflow:hidden}
+.cell{padding:7px 14px 6px;display:grid;gap:1px;justify-items:center;border-right:1px solid var(--edge);min-width:92px}
+.cell:last-child{border-right:0}
+.cell i{font-style:normal;font-family:var(--pix);font-weight:700;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--p-dim)}
+.cell b{font-weight:400;font-size:25px;line-height:1.05;color:var(--p-bright);text-shadow:0 0 11px rgba(45,255,106,.6)}
+.cell.warn b{color:var(--amber);text-shadow:0 0 11px rgba(255,176,0,.55)}
+/* ---------- main grid ---------- */
+main{display:grid;grid-template-columns:1fr 330px;gap:8px;min-height:0}
+.scopes-right{display:grid;grid-template-rows:1fr 1fr auto;gap:8px;min-height:0}
+canvas{display:block;width:100%;height:100%}
+.scope{position:relative;overflow:hidden;min-height:0;background:radial-gradient(ellipse at 50% 60%,#0a1f11,var(--scope) 75%)}
+/* readout strip under B scope */
+.bwrap{display:grid;grid-template-rows:1fr auto;gap:8px;min-height:0}
+.tracks{padding:22px 8px 8px;display:grid;gap:3px;align-content:start}
+.trk{
+  display:grid;grid-template-columns:14px 1fr 58px 52px 42px;gap:8px;align-items:center;
+  padding:5px 8px;border:1px solid transparent;border-radius:3px;font-size:17px;line-height:1;
+}
+.trk.sel{border-color:var(--amber);background:rgba(255,176,0,.10);color:var(--amber)}
+.trk .sym{font-size:13px;text-align:center}
+.trk .nm{font-family:var(--pix);font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trk .n{text-align:right;color:var(--p-bright)}
+.trk.sel .n{color:var(--amber)}
+.trk.air .sym{color:var(--p)} .trk.sea .sym{color:#3ec8ff} .trk.gnd .sym{color:#ffe14d}
+/* stores */
+.stores{padding:22px 8px 9px;display:grid;gap:5px}
+.st{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:6px 9px;border:1px solid var(--edge);border-radius:3px;font-size:17px}
+.st.on{border-color:var(--amber);background:rgba(255,176,0,.10)}
+.st .w{font-family:var(--pix);font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase}
+.st.on .w{color:var(--amber)}
+.st .q{color:var(--p-bright);font-size:19px}
+.st .rail{display:flex;gap:3px}
+.st .rail i{width:7px;height:13px;background:var(--p-dim);border-radius:1px;display:block}
+.st.on .rail i{background:var(--amber);box-shadow:0 0 7px rgba(255,176,0,.7)}
+.st .rail i.spent{background:transparent;border:1px solid var(--p-dim);box-shadow:none}
+/* ---------- footer controls ---------- */
+footer{display:grid;grid-template-columns:auto auto auto 1fr;gap:8px;align-items:stretch}
+.group{padding:20px 9px 9px;display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.btn{
+  font-family:var(--pix);font-weight:700;font-size:12px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--p-dim);background:linear-gradient(180deg,#1d2617,#121810);
+  border:1px solid var(--edge);border-bottom-width:2px;border-radius:2px;padding:7px 10px;cursor:pointer;
+  transition:color .12s,border-color .12s,background .12s,box-shadow .12s;
+}
+.btn:hover{color:var(--p);border-color:var(--edge-hi)}
+.btn.on{color:var(--ink);background:linear-gradient(180deg,#8dffb0,var(--p) 40%,#17c24d);
+  border-color:var(--p-bright);box-shadow:0 0 14px rgba(45,255,106,.55), inset 0 1px 0 rgba(255,255,255,.35)}
+.btn.alert{color:var(--amber);border-color:#5a4a12}
+.btn.alert:hover{color:#ffd166;border-color:var(--amber);box-shadow:0 0 12px rgba(255,176,0,.35)}
+.keys{padding:20px 12px 9px;display:flex;gap:14px;align-items:center;justify-content:flex-end;flex-wrap:wrap;font-size:17px;color:var(--p-dim)}
+.keys b{font-weight:700;color:var(--p);font-family:var(--pix);font-size:12px;
+  border:1px solid var(--edge);border-radius:3px;padding:6px 6px 7px;margin-right:5px}
+/* ---------- dossier ---------- */
+#dossier{
+  position:fixed;inset:0;z-index:58;display:none;place-content:center;padding:20px;
+  background:rgba(3,7,3,.86);
+}
+#dossier.on{display:grid}
+.dos-sheet{width:min(1080px,96vw);max-height:92vh;overflow:auto;padding:0}
+.dos-head{
+  display:flex;justify-content:space-between;align-items:flex-start;gap:16px;
+  padding:16px 18px 13px;border-bottom:2px solid var(--edge);
+}
+.dos-head h2{font-family:var(--stencil);font-size:24px;letter-spacing:.06em;color:var(--p-bright)}
+.dos-head p{font-family:var(--pix);font-weight:700;font-size:12px;letter-spacing:.22em;color:var(--p-dim);margin-top:5px}
+.dos-class{
+  font-family:var(--pix);font-weight:700;font-size:14px;letter-spacing:.2em;color:#0a0a0a;
+  background:var(--amber);padding:6px 12px;border-radius:2px;transform:rotate(1.5deg);
+  box-shadow:0 0 18px rgba(255,176,0,.35);
+}
+.dos-grid{
+  display:grid;grid-template-columns:230px 104px 176px 1fr 166px;gap:14px;align-items:start;
+  padding:12px 18px;border-bottom:1px solid rgba(51,65,42,.6);
+}
+.dos-hrow{
+  font-family:var(--pix);font-weight:700;font-size:11px;letter-spacing:.2em;color:var(--p-dim);
+  background:rgba(45,255,106,.04);padding-top:9px;padding-bottom:9px;
+}
+.row .d-name{font-family:var(--pix);font-weight:700;font-size:15px;letter-spacing:.06em;color:var(--p-bright);display:grid;gap:3px}
+.row .d-name em{font-style:normal;font-family:var(--read);font-size:14px;letter-spacing:.04em;color:var(--p-dim)}
+.row .d-cls{font-family:var(--pix);font-weight:700;font-size:12px;letter-spacing:.14em;padding:3px 8px;border:1px solid currentColor;border-radius:2px;justify-self:start;white-space:nowrap}
+.row.air .d-cls{color:#2dff6a} .row.sea .d-cls{color:#3ec8ff} .row.gnd .d-cls{color:#ffe14d}
+.row.nostrike .d-cls{color:var(--red)}
+.row.nostrike{opacity:.62}
+.row .d-mode{color:var(--amber);font-size:15px;letter-spacing:.06em}
+.row .d-prof{color:var(--p);font-size:15px;line-height:1.45;opacity:.85}
+.row .d-opens{color:var(--p-dim);font-size:14px;text-align:right;white-space:nowrap}
+.dos-foot{
+  display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+  padding:13px 18px;font-size:13px;letter-spacing:.06em;color:var(--p-dim);
+}
+@media (max-width:900px){
+  .dos-grid{grid-template-columns:1fr 1fr;gap:8px}
+  .row .d-prof,.row .d-opens{grid-column:1/-1;text-align:left}
+}
+
+/* ---------- chooser overlay ---------- */
+#chooser{
+  position:fixed;inset:0;z-index:60;display:none;place-content:center;justify-items:center;gap:26px;
+  background:radial-gradient(ellipse at 50% 40%,rgba(10,30,22,.94),rgba(2,6,4,.97));
+}
+#chooser.on{display:grid}
+.ch-title{font-family:var(--stencil);font-size:22px;letter-spacing:.14em;color:var(--p-bright);text-shadow:0 0 16px rgba(45,255,106,.5)}
+.ch-sub{font-family:var(--pix);font-weight:700;font-size:12px;letter-spacing:.34em;text-transform:uppercase;color:var(--p-dim)}
+.ch-row{display:flex;gap:22px;flex-wrap:wrap;justify-content:center}
+.ch{
+  width:250px;padding:26px 20px;display:grid;justify-items:center;gap:14px;cursor:pointer;
+  background:linear-gradient(180deg,var(--panel-2),var(--panel));
+  border:2px solid var(--edge);border-radius:8px;transition:border-color .15s,transform .15s,box-shadow .15s;
+}
+.ch:hover{border-color:var(--p);transform:translateY(-3px);box-shadow:0 0 30px rgba(45,255,106,.18)}
+.ch svg{width:104px;height:64px}
+.ch b{font-family:var(--stencil);font-size:17px;letter-spacing:.08em;color:var(--p-bright)}
+.ch span{font-size:17px;color:var(--p-dim);text-align:center;line-height:1.25}
+@media (max-width:1100px){
+  main{grid-template-columns:1fr 268px}
+  footer{grid-template-columns:1fr 1fr;}
+  .keys{justify-content:flex-start}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="frame brand">
+    <b>GARRISON</b>
+    <span class="plate">AN/APG-71<br>MOCKUP · NOT FOR NAV</span>
+  </div>
+  <div class="frame state">
+    <div class="cell"><i>mach</i><b>1.20</b></div>
+    <div class="cell"><i>alt m</i><b>6000</b></div>
+    <div class="cell"><i>hdg</i><b>360</b></div>
+    <div class="cell"><i>ant az</i><b id="rAz">+00</b></div>
+    <div class="cell"><i>ant el</i><b id="rEl">-05</b></div>
+    <div class="cell warn"><i>tracks</i><b>06</b></div>
+  </div>
+  <div class="frame state">
+    <div class="cell warn"><i>mode</i><b style="font-size:19px">TWS</b></div>
+    <div class="cell"><i>tti</i><b id="rTti">0:14</b></div>
+  </div>
+</header>
+
+<div class="hazard"></div>
+
+<main>
+  <div class="bwrap">
+    <div class="frame scope">
+      <span class="cap">B-SCOPE · AZ / RNG</span><span class="cap r">100 KM · 60×10</span>
+      <canvas id="bscope"></canvas>
+    </div>
+    <div class="frame scope" style="height:168px">
+      <span class="cap">E-SCOPE · RNG / EL</span><span class="cap r">± 60°</span>
+      <canvas id="escope"></canvas>
+    </div>
+  </div>
+
+  <div class="scopes-right">
+    <div class="frame scope">
+      <span class="cap">C-SCOPE · AZ / EL</span><span class="cap r">GIMBAL</span>
+      <canvas id="cscope"></canvas>
+    </div>
+
+    <div class="frame tracks">
+      <span class="cap">TRACK FILE</span>
+      <div class="trk air sel"><span class="sym">◇</span><span class="nm">AETHERFALL</span><span class="n">34.2</span><span class="n">8200</span><span class="n">M.95</span></div>
+      <div class="trk gnd"><span class="sym">▣</span><span class="nm">WORD WAR 3</span><span class="n">18.6</span><span class="n">0</span><span class="n">GMTI</span></div>
+      <div class="trk sea"><span class="sym">⬢</span><span class="nm">VEHICLE SPOT</span><span class="n">61.0</span><span class="n">0</span><span class="n">SEA</span></div>
+      <div class="trk air"><span class="sym">◇</span><span class="nm">FIELD NOTES</span><span class="n">77.4</span><span class="n">3100</span><span class="n">M.88</span></div>
+      <div class="trk air"><span class="sym">◇</span><span class="nm">UNKNOWN 05</span><span class="n">88.1</span><span class="n">9400</span><span class="n">M1.0</span></div>
+      <div class="trk gnd"><span class="sym">▣</span><span class="nm">UNKNOWN 06</span><span class="n">44.9</span><span class="n">0</span><span class="n">HDN</span></div>
+    </div>
+
+    <div class="frame stores">
+      <span class="cap">STORES</span>
+      <div class="st on"><span class="w">AIM-7 SPARROW</span><span class="rail"><i class="spent"></i><i></i><i></i><i></i></span><span class="q">3</span></div>
+      <div class="st"><span class="w">AGM-84 HARPOON</span><span class="rail"><i></i><i></i></span><span class="q">2</span></div>
+      <div class="st"><span class="w">AGM-114L</span><span class="rail"><i></i><i></i><i></i><i></i></span><span class="q">8</span></div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="frame group">
+    <span class="cap">MODE</span>
+    <button class="btn">SRC</button><button class="btn on">TWS</button>
+    <button class="btn">SRC HDN</button><button class="btn">TWS HDN</button>
+    <button class="btn">SRC GMTI</button><button class="btn">TWS GMTI</button>
+    <button class="btn">TWS SEA</button>
+  </div>
+  <div class="frame group">
+    <span class="cap">SCALE</span>
+    <button class="btn">10</button><button class="btn">25</button>
+    <button class="btn">50</button><button class="btn on">100</button>
+  </div>
+  <div class="frame group">
+    <span class="cap">PATTERN</span>
+    <button class="btn">15×15</button><button class="btn">30×15</button>
+    <button class="btn on">60×10</button><button class="btn">120×5</button>
+  </div>
+  <div class="frame keys">
+    <span class="cap">CONTROLS</span>
+    <button class="btn alert" id="dossierBtn">▤ DOSSIER</button>
+    <span><b>← →</b>antenna az</span>
+    <span><b>↑ ↓</b>antenna el</span>
+    <span><b>TAB</b>step track</span>
+    <span><b>ENTER</b>lock</span>
+    <span><b>SPACE</b>launch</span>
+  </div>
+</footer>
+
+<div id="dossier">
+  <div class="dos-sheet frame">
+    <div class="dos-head">
+      <div>
+        <h2>TARGET DOSSIER</h2>
+        <p>ANNEX B · KNOWN CONTACTS IN THE OPERATING AREA</p>
+      </div>
+      <div class="dos-class">RESTRICTED</div>
+    </div>
+
+    <div class="dos-grid dos-hrow">
+      <span>DESIGNATION</span><span>CLASS</span><span>ACQUIRE IN</span><span>PROFILE</span><span>OPENS</span>
+    </div>
+
+    <div class="dos-grid row air">
+      <span class="d-name">AETHERFALL<em>◇ air contact</em></span>
+      <span class="d-cls">AIR</span>
+      <span class="d-mode">SRC · TWS</span>
+      <span class="d-prof">M0.80–1.10 · 500–10 000 m · manoeuvring. Fast mover, crosses the scan box quickly — lead it or lose it.</span>
+      <span class="d-opens">/wizardgame/</span>
+    </div>
+
+    <div class="dos-grid row gnd">
+      <span class="d-name">WORD WAR 3<em>▣ ground contact</em></span>
+      <span class="d-cls">GROUND</span>
+      <span class="d-mode">SRC GMTI · TWS GMTI</span>
+      <span class="d-prof">Armoured column, moving. Only paints in a GMTI mode; invisible to air search.</span>
+      <span class="d-opens">/clockwords/</span>
+    </div>
+
+    <div class="dos-grid row sea">
+      <span class="d-name">VEHICLE SPOTTER<em>⬢ surface contact</em></span>
+      <span class="d-cls">SURFACE</span>
+      <span class="d-mode">TWS SEA</span>
+      <span class="d-prof">Stationary hull, large return. Sea mode only, and it sits well out — needs the 100 km scale.</span>
+      <span class="d-opens">/vehicle-spotter/</span>
+    </div>
+
+    <div class="dos-grid row gnd">
+      <span class="d-name">FIELD NOTES<em>▣ ground contact · the old home page</em></span>
+      <span class="d-cls">GROUND</span>
+      <span class="d-mode">SRC HDN · TWS HDN</span>
+      <span class="d-prof">Static site, low return, hidden in clutter. Needs a HDN mode and a tight 15×15 pattern.</span>
+      <span class="d-opens">/classic.html</span>
+    </div>
+
+    <div class="dos-grid row nostrike">
+      <span class="d-name">THE WORKSHOP<em>▣ no-strike</em></span>
+      <span class="d-cls">NO-STRIKE</span>
+      <span class="d-mode">—</span>
+      <span class="d-prof">Under construction. Paints on the scope, refuses lock.</span>
+      <span class="d-opens">—</span>
+    </div>
+
+    <div class="dos-foot">
+      <span>WEAPON PAIRING &nbsp;·&nbsp; AIR → AIM-7 SPARROW &nbsp;·&nbsp; SURFACE → AGM-84 HARPOON &nbsp;·&nbsp; GROUND → AGM-114L LONGBOW HELLFIRE</span>
+      <button class="btn" id="dosClose">CLOSE · ESC</button>
+    </div>
+  </div>
+</div>
+
+<div id="chooser">
+  <div class="ch-sub">select your ride</div>
+  <div class="ch-title">HOW DO YOU WANT TO NAVIGATE?</div>
+  <div class="ch-row">
+    <div class="ch">
+      <svg viewBox="0 0 120 70" aria-hidden="true">
+        <g fill="none" stroke="#2dff6a" stroke-width="2.5" stroke-linejoin="round">
+          <path d="M14 42h30l10-16h10l-4 16h22l10-8 8 8-8 8-10-8" />
+          <path d="M20 42v10h56V42" /><circle cx="32" cy="55" r="5"/><circle cx="48" cy="55" r="5"/><circle cx="64" cy="55" r="5"/>
+        </g>
+      </svg>
+      <b>TANK</b><span>drive the course, shoot the targets</span>
+    </div>
+    <div class="ch">
+      <svg viewBox="0 0 120 70" aria-hidden="true">
+        <g fill="none" stroke="#2dff6a" stroke-width="2.5" stroke-linejoin="round">
+          <path d="M60 8 66 30l34 16v6L66 44l-2 14 10 8v4l-14-4-14 4v-4l10-8-2-14-34 8v-6l34-16z"/>
+        </g>
+      </svg>
+      <b>PLANE</b><span>sweep the radar, lock and launch</span>
+    </div>
+  </div>
+  <div class="ch-sub">remembered for next time · switchable any time</div>
+</div>
+
+<script>
+/* ============================================================
+   MOCKUP ONLY. Fake contacts on rails, no radar logic, no
+   missile model - just enough motion to judge the layout.
+   ============================================================ */
+const DPR = Math.min(2, devicePixelRatio || 1);
+const SCALE_KM = 100, HALF_AZ = 60, HALF_EL = 10;   // pattern 60x10
+const GIMBAL_AZ = 90, GIMBAL_EL = 60;
+
+const contacts = [
+  { name:'AETHERFALL',   kind:'air', az:-22, rng:34.2, el: 3.6, spd:.95, locked:true },
+  { name:'WORD WAR 3',   kind:'gnd', az: 12, rng:18.6, el:-9.2, spd:0 },
+  { name:'VEHICLE SPOT', kind:'sea', az: 38, rng:61.0, el:-5.6, spd:0 },
+  { name:'FIELD NOTES',  kind:'air', az:-48, rng:77.4, el:-2.1, spd:.88 },
+  { name:'UNKNOWN 05',   kind:'air', az: 51, rng:88.1, el: 2.4, spd:1.02 },
+  { name:'UNKNOWN 06',   kind:'gnd', az:-34, rng:44.9, el:-7.0, spd:0 },
+];
+const COL = { air:'#2dff6a', sea:'#3ec8ff', gnd:'#ffe14d' };
+const missile = { az:-20.5, rng:22.0, el:2.2, tti:14 };
+
+function fit(cv){
+  const r = cv.parentElement.getBoundingClientRect();
+  cv.width = Math.max(1, Math.floor((r.width - 6) * DPR));
+  cv.height = Math.max(1, Math.floor((r.height - 6) * DPR));
+  const g = cv.getContext('2d');
+  g.setTransform(DPR,0,0,DPR,0,0);
+  return { g, w:(r.width - 6), h:(r.height - 6) };
+}
+const grid = (g,w,h,cols,rows)=>{
+  g.strokeStyle='rgba(45,255,106,.10)'; g.lineWidth=1;
+  for(let i=1;i<cols;i++){const x=(i/cols)*w;g.beginPath();g.moveTo(x,0);g.lineTo(x,h);g.stroke();}
+  for(let i=1;i<rows;i++){const y=(i/rows)*h;g.beginPath();g.moveTo(0,y);g.lineTo(w,y);g.stroke();}
+  g.strokeStyle='rgba(45,255,106,.22)';
+  g.strokeRect(.5,.5,w-1,h-1);
+};
+const label = (g,t,x,y,c)=>{ g.font='12px "Share Tech Mono",monospace'; g.fillStyle=c; g.fillText(t,x,y); };
+
+/* moving map, warped into B-scope space */
+let mapY = 0;
+const feats = [];
+(function seedMap(){
+  let s = 7;
+  const rnd = ()=> (s = (s*16807)%2147483647)/2147483647;
+  for(let i=0;i<9;i++){
+    const pts=[], x0=(rnd()-.5)*220, y0=rnd()*260;
+    let x=x0,y=y0;
+    for(let k=0;k<14;k++){ pts.push([x,y]); x+=(rnd()-.5)*26; y+=8+rnd()*12; }
+    feats.push({pts, c: i%3===0 ? 'rgba(62,200,255,.16)' : 'rgba(45,255,106,.09)'});
+  }
+})();
+
+function drawB(){
+  const {g,w,h}=fit(document.getElementById('bscope'));
+  g.clearRect(0,0,w,h);
+  const X = az => (az/HALF_AZ*0.5+0.5)*w;
+  const Y = rn => h - (rn/SCALE_KM)*h;
+
+  // warped map first, under everything
+  g.lineWidth=1.4;
+  for(const f of feats){
+    g.strokeStyle=f.c; g.beginPath(); let started=false;
+    for(const [mx,my] of f.pts){
+      const dy = my - mapY, dx = mx;
+      const rng = Math.hypot(dx,dy), az = Math.atan2(dx,dy)*180/Math.PI;
+      if(dy<=0 || rng>SCALE_KM || Math.abs(az)>HALF_AZ){ started=false; continue; }
+      const px=X(az), py=Y(rng);
+      started ? g.lineTo(px,py) : g.moveTo(px,py); started=true;
+    }
+    g.stroke();
+  }
+  grid(g,w,h,8,4);
+  for(let i=2;i<=4;i++) label(g,(SCALE_KM*i/4).toFixed(0)+' KM', 6, Y(SCALE_KM*i/4)-6, 'rgba(45,255,106,.32)');
+  for(const a of [-30,0,30]) label(g,(a>0?'+':'')+a+'°', X(a)-11, h-7, 'rgba(45,255,106,.32)');
+  label(g,'-60°', 6, h-7, 'rgba(45,255,106,.32)');
+  label(g,'+60°', w-36, h-7, 'rgba(45,255,106,.32)');
+
+  // sweep bar with phosphor wake
+  const t = performance.now()/1000;
+  const sweep = Math.sin(t*0.9)*HALF_AZ;
+  const sx = X(sweep);
+  const grd = g.createLinearGradient(sx-46,0,sx+46,0);
+  grd.addColorStop(0,'rgba(45,255,106,0)');
+  grd.addColorStop(.5,'rgba(45,255,106,.16)');
+  grd.addColorStop(1,'rgba(45,255,106,0)');
+  g.fillStyle=grd; g.fillRect(sx-46,0,92,h);
+  g.strokeStyle='rgba(196,255,214,.9)'; g.lineWidth=1.5;
+  g.beginPath(); g.moveTo(sx,0); g.lineTo(sx,h); g.stroke();
+
+  for(const c of contacts){
+    if(Math.abs(c.az)>HALF_AZ || c.rng>SCALE_KM) continue;
+    const x=X(c.az), y=Y(c.rng);
+    const fresh = 1 - Math.min(1, Math.abs(c.az-sweep)/26);
+    g.globalAlpha = .35 + fresh*.65;
+    g.fillStyle = COL[c.kind];
+    g.shadowColor = COL[c.kind]; g.shadowBlur = 10;
+    if(c.kind==='air'){ g.beginPath(); g.moveTo(x,y-6); g.lineTo(x+6,y); g.lineTo(x,y+6); g.lineTo(x-6,y); g.fill(); }
+    else if(c.kind==='sea'){ g.beginPath(); g.arc(x,y,5.4,0,6.283); g.fill(); }
+    else { g.fillRect(x-5,y-5,10,10); }
+    g.shadowBlur=0; g.globalAlpha=1;
+    if(c.locked){
+      g.strokeStyle='#ffb000'; g.lineWidth=2;
+      g.strokeRect(x-13,y-13,26,26);
+      g.beginPath(); g.moveTo(x,y-13); g.lineTo(x,y-22); g.stroke();
+      label(g,c.name,x-13,y-30,'#ffb000');
+      g.font='14px "Share Tech Mono",monospace'; g.fillStyle='rgba(255,176,0,.85)';
+      g.fillText(c.rng.toFixed(1)+' KM   M'+c.spd.toFixed(2)+'   '+(c.el>0?'+':'')+c.el.toFixed(1)+'°', x-13, y+32);
+    } else {
+      label(g,c.name,x+9,y+4,'rgba(45,255,106,.55)');
+    }
+  }
+
+  // AIM-7 in flight + trail
+  const mx=X(missile.az), my=Y(missile.rng);
+  g.strokeStyle='rgba(255,176,0,.5)'; g.setLineDash([3,4]); g.lineWidth=1.4;
+  g.beginPath(); g.moveTo(X(0),Y(0)); g.lineTo(mx,my); g.stroke(); g.setLineDash([]);
+  g.fillStyle='#ffb000'; g.shadowColor='#ffb000'; g.shadowBlur=12;
+  g.beginPath(); g.moveTo(mx,my-7); g.lineTo(mx+3.5,my+5); g.lineTo(mx-3.5,my+5); g.fill();
+  g.shadowBlur=0;
+  label(g,'AIM-7 · TTI 0:14', mx+12, my+16, '#ffb000');
+
+  // ownship + antenna pointer
+  g.strokeStyle='rgba(196,255,214,.95)'; g.lineWidth=2;
+  g.beginPath(); g.moveTo(X(0)-9,h-1); g.lineTo(X(0),h-13); g.lineTo(X(0)+9,h-1); g.stroke();
+}
+
+function drawC(){
+  const {g,w,h}=fit(document.getElementById('cscope'));
+  g.clearRect(0,0,w,h);
+  const X = az => (az/GIMBAL_AZ*0.5+0.5)*w;
+  const Y = el => (0.5 - el/GIMBAL_EL*0.5)*h;
+  grid(g,w,h,6,4);
+  // scan box
+  g.strokeStyle='rgba(255,176,0,.55)'; g.setLineDash([4,3]); g.lineWidth=1.4;
+  g.strokeRect(X(-HALF_AZ),Y(HALF_EL),X(HALF_AZ)-X(-HALF_AZ),Y(-HALF_EL)-Y(HALF_EL));
+  g.setLineDash([]);
+  label(g,'SCAN 60×10', X(-HALF_AZ)+4, Y(HALF_EL)-6, 'rgba(255,176,0,.7)');
+  // horizon
+  g.strokeStyle='rgba(45,255,106,.3)'; g.beginPath(); g.moveTo(0,Y(0)); g.lineTo(w,Y(0)); g.stroke();
+  for(const c of contacts){
+    const x=X(c.az), y=Y(c.el);
+    g.fillStyle=COL[c.kind]; g.shadowColor=COL[c.kind]; g.shadowBlur=8;
+    g.fillRect(x-4,y-4,8,8); g.shadowBlur=0;
+    if(c.locked){ g.strokeStyle='#ffb000'; g.lineWidth=2; g.strokeRect(x-10,y-10,20,20); }
+  }
+  label(g,'-90',4,h-6,'rgba(45,255,106,.35)');
+  label(g,'+90',w-30,h-6,'rgba(45,255,106,.35)');
+  label(g,'+60',4,14,'rgba(45,255,106,.35)');
+}
+
+function drawE(){
+  const {g,w,h}=fit(document.getElementById('escope'));
+  g.clearRect(0,0,w,h);
+  const X = rn => (rn/SCALE_KM)*w;
+  const Y = el => (0.5 - el/GIMBAL_EL*0.5)*h;
+  grid(g,w,h,8,4);
+  g.strokeStyle='rgba(45,255,106,.3)'; g.beginPath(); g.moveTo(0,Y(0)); g.lineTo(w,Y(0)); g.stroke();
+  label(g,'0°',4,Y(0)-5,'rgba(45,255,106,.35)');
+  for(let i=1;i<=3;i++) label(g,(SCALE_KM*i/4).toFixed(0), X(SCALE_KM*i/4)-12, h-7,'rgba(45,255,106,.32)');
+  label(g,SCALE_KM+' KM', w-58, h-7,'rgba(45,255,106,.32)');
+  for(const c of contacts){
+    const x=X(c.rng), y=Y(c.el);
+    g.fillStyle=COL[c.kind]; g.shadowColor=COL[c.kind]; g.shadowBlur=8;
+    g.fillRect(x-4,y-4,8,8); g.shadowBlur=0;
+    if(c.locked){
+      g.strokeStyle='#ffb000'; g.lineWidth=2; g.strokeRect(x-10,y-10,20,20);
+      label(g,c.name, x+14, y+3, '#ffb000');
+    }
+  }
+  const mx=X(missile.rng), my=Y(missile.el);
+  g.fillStyle='#ffb000'; g.shadowColor='#ffb000'; g.shadowBlur=10;
+  g.beginPath(); g.moveTo(mx+7,my); g.lineTo(mx-4,my-4); g.lineTo(mx-4,my+4); g.fill(); g.shadowBlur=0;
+}
+
+function frame(){
+  mapY += 0.06;                      // ownship running north
+  for(const c of contacts){
+    c.rng -= c.kind==='air' ? 0.022 : 0.012;
+    if(c.rng < 6) c.rng = SCALE_KM*0.96;
+    if(c.kind==='air') c.az += Math.sin(performance.now()/4200 + c.rng)*0.012;
+  }
+  missile.rng += 0.10; missile.az += 0.004;
+  if(missile.rng > 34) { missile.rng = 8; }
+  drawB(); drawC(); drawE();
+  requestAnimationFrame(frame);
+}
+addEventListener('resize', ()=>{});
+frame();
+
+// ?chooser shows the plane/tank pick screen instead
+if(location.search.includes('chooser') || location.hash.includes('chooser')){
+  document.getElementById('chooser').classList.add('on');
+}
+const dossier = document.getElementById('dossier');
+const toggleDossier = on => dossier.classList.toggle('on', on);
+document.getElementById('dossierBtn').addEventListener('click', e => { e.stopPropagation(); toggleDossier(true); });
+document.getElementById('dosClose').addEventListener('click', e => { e.stopPropagation(); toggleDossier(false); });
+addEventListener('keydown', e => {
+  if(e.key === 'd' || e.key === 'D') toggleDossier(!dossier.classList.contains('on'));
+  if(e.key === 'Escape') toggleDossier(false);
+});
+if(location.search.includes('dossier') || location.hash.includes('dossier')) toggleDossier(true);
+
+document.querySelectorAll('.group .btn').forEach(b=>b.addEventListener('click',()=>{
+  if(b.classList.contains('alert')) return;
+  const sibs=[...b.parentElement.querySelectorAll('.btn:not(.alert)')];
+  sibs.forEach(s=>s.classList.remove('on')); b.classList.add('on');
+}));
+</script>
+</body>
+</html>
