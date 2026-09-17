@@ -1,89 +1,71 @@
 /**
  * Projected-intercept calculator: "if I fired this weapon at this target
- * right now, would it connect - and where?" It runs the exact same
- * boost/coast speed profile and G-limited proportional guidance as a real
- * missile (see missile.js), just against a target whose future position is
- * extrapolated from its CURRENT velocity rather than looked up live each
- * step - a straightforward constant-velocity forecast, not a claim the
- * target will actually fly that path. That's enough to turn "relative
- * velocity + missile telemetry" into a simple 3D forward simulation: at
- * each step, advance the hypothetical target by its velocity, then run one
- * physics step of the same guidance math a live round uses, and check the
- * same fuze radius for a hit.
+ * right now, would it connect - and where?" It runs the same engine used
+ * for a real launch (missile.js) - the same profile, the same Mode.PURSUE
+ * proportional-navigation guidance, the same fuel/capture events - against
+ * a target whose future position is extrapolated at its CURRENT velocity
+ * rather than read live each step, since nothing else is known about what
+ * it will do next. That is what turns "relative velocity + missile
+ * telemetry" into an actual 3D forward simulation rather than a guess.
+ *
+ * Mirrors missile.js's own reachability rule exactly (predicted vs. actual
+ * must agree): running out of fuel just cuts thrust, it doesn't end the
+ * flight - the round coasts, same as a real one - and only a generous
+ * overall flight-time cap (a multiple of the burn time) calls it unreachable.
  */
-import { MISSILES, FUZE_RADIUS_M } from './weapons.js';
-import { DEG, RAD, wrapDeg, clamp } from '../core/rng.js';
-import { relativeTo } from './world.js';
-import { machToMps } from '../core/atmos.js';
-import { G_MPS2, DRAG_EASE, pointToSegmentDist3D } from './missile.js';
+import { World as EngineWorld } from '../engine/world.js';
+import { Command, Mode } from '../engine/bodies.js';
+import { Vec3 } from '../engine/vec.js';
+import * as profiles from '../engine/profiles.js';
+import { contactVelocityVec, boresightVelocity, PHANTOM_ALT_FLOOR_M } from './world.js';
+import { MISSILES } from './weapons.js';
 
-const STEP_SEC = 0.15;
-
-/** Constant-velocity estimate of a contact's current motion, in m/s. Air
- *  contacts fly a fixed heading/mach; everything else (including a
- *  ground_mover's leashed wander) is treated as stationary - the wander has
- *  no net drift, so zero is the right forecast for it. */
-function contactVelocity(c) {
-  if (c.kind === 'air') {
-    const spd = machToMps(c.mach, c.altM);
-    const h = c.headingDeg * DEG;
-    return { vx: Math.sin(h) * spd, vy: Math.cos(h) * spd, vz: 0 };
-  }
-  return { vx: 0, vy: 0, vz: 0 };
-}
+const STEP_SEC = 0.02;
+const COAST_FACTOR = 3.0;
 
 /**
  * Simulates a hypothetical `weaponId` launch at `target` from the current
- * world state. Returns:
- *   { hit, t, point: {x,y,altM} }
- * `point` is the intercept point if `hit`, otherwise the round's position
- * at the moment its flight-time timer would run out (where it would
- * self-destruct) - useful either way as a "reach" cue on the scopes.
+ * world state. Returns { hit, t, point: {x,y,altM} } - `point` is the
+ * intercept point if `hit`, otherwise wherever the round sat the instant it
+ * ran dry (where it would self-destruct) - useful either way as a "reach"
+ * cue on the scopes.
  */
 export function simulateIntercept(world, weaponId, target) {
   const w = MISSILES[weaponId];
+  const prof = profiles.get(w.profile);
   const own = world.own;
-  const rel = relativeTo(own, target);
-  const vel = contactVelocity(target);
+  const launchVel = boresightVelocity(own, target);
+  const targetVel = contactVelocityVec(target);
 
-  let mx = own.x, my = own.y, malt = own.altM;
-  let headingDeg = own.headingDeg + rel.az;
-  let pitchDeg = rel.el;
-  let speed = w.launchMps;
-  let t = 0;
+  const engine = new EngineWorld({ dt: STEP_SEC, collisions: false, separationM: 0 });
+  const phantom = engine.spawn(
+    profiles.get('phantom_target'),
+    new Vec3(target.x, target.y, Math.max(target.altM, PHANTOM_ALT_FLOOR_M)), targetVel,
+    { command: new Command({ mode: Mode.BALLISTIC }) },
+  );
+  const body = engine.spawn(
+    prof, new Vec3(own.x, own.y, own.altM), launchVel,
+    { command: new Command({ mode: Mode.PURSUE, targetId: phantom.id }) },
+  );
+
   let tx = target.x, ty = target.y, tz = target.altM;
+  const point = () => ({ x: body.position.x, y: body.position.y, altM: body.position.z });
+  const burnTimeS = prof.burnRateKgs > 0 ? prof.fuelKg / prof.burnRateKgs : 0;
+  const maxFlightSec = burnTimeS * COAST_FACTOR;
+  const maxSteps = Math.ceil(maxFlightSec / STEP_SEC);
 
-  while (t < w.maxFlightSec) {
-    t += STEP_SEC;
-    if (t <= w.boostSec) {
-      speed = w.launchMps + w.boostMps2 * t;
-    } else {
-      speed += (w.cruiseMps - speed) * DRAG_EASE * STEP_SEC;
+  for (let i = 0; i < maxSteps; i++) {
+    engine.step(STEP_SEC);
+    // Constant-velocity forecast: carry the phantom in a straight line
+    // rather than let it drift under its own (irrelevant) ballistic physics.
+    tx += targetVel.x * STEP_SEC; ty += targetVel.y * STEP_SEC; tz += targetVel.z * STEP_SEC;
+    phantom.position = new Vec3(tx, ty, Math.max(tz, PHANTOM_ALT_FLOOR_M));
+    phantom.velocity = targetVel;
+
+    for (const e of engine.drainEvents()) {
+      if (e.kind === 'beacon_attached' && e.id === body.id) { return { hit: true, t: body.ageS, point: point() }; }
     }
-
-    tx += vel.vx * STEP_SEC; ty += vel.vy * STEP_SEC; tz += vel.vz * STEP_SEC;
-
-    const dx = tx - mx, dy = ty - my, dz = tz - malt;
-    const groundDist = Math.hypot(dx, dy);
-    const wantHeading = Math.atan2(dx, dy) * RAD;
-    const wantPitch = Math.atan2(dz, groundDist) * RAD;
-
-    const maxTurnDegPerSec = (w.maxGTurn * G_MPS2 / Math.max(speed, 1)) * RAD;
-    const step = maxTurnDegPerSec * STEP_SEC;
-    headingDeg = wrapDeg(headingDeg + clamp(wrapDeg(wantHeading - headingDeg), -step, step));
-    pitchDeg = clamp(pitchDeg + clamp(wantPitch - pitchDeg, -step, step), -85, 85);
-
-    const hRad = headingDeg * DEG, pRad = pitchDeg * DEG;
-    const stepM = speed * STEP_SEC;
-    const oldX = mx, oldY = my, oldAlt = malt;
-    mx += Math.sin(hRad) * Math.cos(pRad) * stepM;
-    my += Math.cos(hRad) * Math.cos(pRad) * stepM;
-    malt += Math.sin(pRad) * stepM;
-
-    const missDist = pointToSegmentDist3D(tx, ty, tz, oldX, oldY, oldAlt, mx, my, malt);
-    if (missDist < FUZE_RADIUS_M) {
-      return { hit: true, t, point: { x: mx, y: my, altM: malt } };
-    }
+    if (!body.active) { return { hit: false, t: body.ageS, point: point() }; }
   }
-  return { hit: false, t, point: { x: mx, y: my, altM: malt } };
+  return { hit: false, t: body.ageS, point: point() };
 }

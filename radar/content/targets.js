@@ -55,7 +55,7 @@ export const TARGETS = [
     kind: 'sea',
     href: '/vehicle-spotter/',
     accent: '#3ec8ff',
-    x: 55, y: 61,
+    x: 9, y: 47,
     dossier: {
       cls: 'SURFACE',
       modes: 'TWS SEA',

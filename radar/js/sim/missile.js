@@ -1,19 +1,36 @@
-import { MISSILES, FUZE_RADIUS_M } from './weapons.js';
-import { DEG, RAD, wrapDeg, clamp } from '../core/rng.js';
-import { relativeTo } from './world.js';
+/**
+ * Missile flight, run on the ported skysim engine (../engine/) instead of
+ * a hand-rolled guidance loop. Each round is a real point-mass Body flying
+ * Mode.PURSUE - the engine's own proportional-navigation law (nulling the
+ * line-of-sight rotation rate, see engine/control.js) - in a small
+ * dedicated engine World of its own.
+ *
+ * PURSUE steers toward another Body looked up by id in that same World, but
+ * our targets (radar contacts) live outside the engine entirely. So each
+ * missile carries a "phantom" - an inert stand-in Body placed at the real
+ * target's live position/velocity and re-synced from ground truth every
+ * tick before the engine steps - which is what the missile's guidance
+ * actually chases. Capture (within the profile's captureRadiusM, doubling
+ * as the fuze radius) is the engine's own event, not a bespoke hit check.
+ *
+ * Running dry (fuelExhausted) does NOT end the flight - a real motor burns
+ * for a few seconds to tens of seconds and the round coasts unpowered the
+ * rest of the way on stored energy and lift, same as a real Sparrow/
+ * Harpoon/Hellfire; the engine's own thrust model already cuts thrust to
+ * zero once fuel is gone, so this falls out for free. "Out of range" is a
+ * generous overall flight-time cap - a few multiples of the burn time -
+ * as the actual self-destruct: a safety valve against a round that can
+ * genuinely never catch its target, not the primary reachability gate.
+ */
+const COAST_FACTOR = 3.0;   // multiple of the fuel-burn time a round may coast unpowered
+import { World as EngineWorld } from '../engine/world.js';
+import { Command, Mode } from '../engine/bodies.js';
+import { Vec3 } from '../engine/vec.js';
+import * as profiles from '../engine/profiles.js';
+import { relativeTo, contactVelocityVec, boresightVelocity, PHANTOM_ALT_FLOOR_M } from './world.js';
+import { MISSILES } from './weapons.js';
 
-export const G_MPS2 = 9.81;
-
-/** Shortest distance from point p to the segment a->b, in 3D. */
-export function pointToSegmentDist3D(px, py, pz, ax, ay, az, bx, by, bz) {
-  const abx = bx - ax, aby = by - ay, abz = bz - az;
-  const apx = px - ax, apy = py - ay, apz = pz - az;
-  const abLenSq = abx * abx + aby * aby + abz * abz;
-  const t = abLenSq > 1e-6 ? clamp((apx * abx + apy * aby + apz * abz) / abLenSq, 0, 1) : 0;
-  const cx = ax + abx * t, cy = ay + aby * t, cz = az + abz * t;
-  return Math.hypot(px - cx, py - cy, pz - cz);
-}
-export const DRAG_EASE = 0.18;   // how fast a coasting round settles onto cruise speed
+const MISSILE_DT = 0.02;   // fixed sub-step the engine's guidance/control gains are tuned for
 
 /**
  * Launches a round of `weaponId` from the ownship at `target` (a live
@@ -23,67 +40,60 @@ export const DRAG_EASE = 0.18;   // how fast a coasting round settles onto cruis
  */
 export function launchMissile(world, weaponId, target) {
   const w = MISSILES[weaponId];
+  const prof = profiles.get(w.profile);
   const own = world.own;
-  const rel = relativeTo(own, target);
-  const bearing = (own.headingDeg + rel.az) * DEG;
+  const launchVel = boresightVelocity(own, target);
+
+  const engine = new EngineWorld({ dt: MISSILE_DT, collisions: false, separationM: 0 });
+  const phantom = engine.spawn(
+    profiles.get('phantom_target'),
+    new Vec3(target.x, target.y, Math.max(target.altM, PHANTOM_ALT_FLOOR_M)), contactVelocityVec(target),
+    { name: 'phantom', command: new Command({ mode: Mode.BALLISTIC }) },
+  );
+  const body = engine.spawn(
+    prof, new Vec3(own.x, own.y, own.altM), launchVel,
+    { name: weaponId, command: new Command({ mode: Mode.PURSUE, targetId: phantom.id }) },
+  );
+
+  const burnTimeS = prof.burnRateKgs > 0 ? prof.fuelKg / prof.burnRateKgs : 0;
   return {
-    weaponId, targetId: target.id, w,
-    x: own.x, y: own.y, altM: own.altM,
-    headingDeg: own.headingDeg + rel.az,
-    pitchDeg: rel.el,
-    speed: w.launchMps,
-    t: 0, distanceM: 0,
-    alive: true, hit: false, expired: false,
+    weaponId, targetId: target.id, w, engine, body, phantom,
+    x: body.position.x, y: body.position.y, altM: body.position.z,
+    headingDeg: body.headingDeg(), pitchDeg: body.flightPathAngleDeg(), speed: body.speedMps,
+    t: 0, maxFlightSec: burnTimeS * COAST_FACTOR, alive: true, hit: false, expired: false,
   };
 }
 
-/** Advance one missile by dt. Marks it dead (hit or spent) as needed. */
+/** Advance one missile by dt. Marks it dead (hit, dry, or crashed) as needed. */
 export function tickMissile(world, m, dt) {
   if (!m.alive) { return; }
-  m.t += dt;
-
-  // Range, modelled as a flight-time limit (motor/fuel burn) rather than a
-  // distance - still going when the clock runs out means a self-destruct,
-  // not a hit.
-  if (m.t > m.w.maxFlightSec) { m.alive = false; m.expired = true; return; }
-
-  // --- speed profile: boost, then ease onto the cruise speed ---
-  if (m.t <= m.w.boostSec) {
-    m.speed = m.w.launchMps + m.w.boostMps2 * m.t;
-  } else {
-    m.speed += (m.w.cruiseMps - m.speed) * DRAG_EASE * dt;
-  }
-
   const target = world.contacts.find((c) => c.id === m.targetId);
   if (!target || !target.alive) { m.alive = false; return; }
 
-  // --- guidance: turn toward the target's current position, rate-limited ---
-  const dx = target.x - m.x, dy = target.y - m.y, dz = target.altM - m.altM;
-  const groundDist = Math.hypot(dx, dy);
-  const wantHeading = Math.atan2(dx, dy) * RAD;
-  const wantPitch = Math.atan2(dz, groundDist) * RAD;
+  // Re-sync the phantom to the real target's current position/velocity
+  // before stepping, so the engine's own guidance chases ground truth.
+  m.phantom.position = new Vec3(target.x, target.y, Math.max(target.altM, PHANTOM_ALT_FLOOR_M));
+  m.phantom.velocity = contactVelocityVec(target);
 
-  const maxTurnDegPerSec = (m.w.maxGTurn * G_MPS2 / Math.max(m.speed, 1)) * RAD;
-  const step = maxTurnDegPerSec * dt;
-  m.headingDeg = wrapDeg(m.headingDeg + clamp(wrapDeg(wantHeading - m.headingDeg), -step, step));
-  m.pitchDeg = clamp(m.pitchDeg + clamp(wantPitch - m.pitchDeg, -step, step), -85, 85);
+  let remaining = dt;
+  while (remaining > 1e-9) {
+    const step = Math.min(MISSILE_DT, remaining);
+    m.engine.step(step);
+    remaining -= step;
+  }
+  m.t += dt;
 
-  const hRad = m.headingDeg * DEG, pRad = m.pitchDeg * DEG;
-  const stepM = m.speed * dt;
-  const oldX = m.x, oldY = m.y, oldAlt = m.altM;
-  m.x += Math.sin(hRad) * Math.cos(pRad) * stepM;
-  m.y += Math.cos(hRad) * Math.cos(pRad) * stepM;
-  m.altM += Math.sin(pRad) * stepM;
-  m.distanceM += stepM;
+  m.x = m.body.position.x; m.y = m.body.position.y; m.altM = m.body.position.z;
+  m.speed = m.body.speedMps;
+  m.headingDeg = m.body.headingDeg();
+  m.pitchDeg = m.body.flightPathAngleDeg();
 
-  // --- fuze / miss conditions ---
-  // A fast round can close more than the fuze radius in a single tick, so
-  // check the target's distance to the whole travelled segment (old->new
-  // position), not just the endpoints - otherwise a close pass can "tunnel"
-  // through the fuze radius between two samples and never register a hit.
-  const missDist = pointToSegmentDist3D(
-    target.x, target.y, target.altM, oldX, oldY, oldAlt, m.x, m.y, m.altM);
-  if (missDist < FUZE_RADIUS_M) { m.alive = false; m.hit = true; return; }
+  for (const e of m.engine.drainEvents()) {
+    if (e.kind === 'beacon_attached' && e.id === m.body.id) { m.alive = false; m.hit = true; }
+  }
+  if (m.alive && m.t > m.maxFlightSec) { m.alive = false; m.expired = true; }
+  // Flew itself into the ground, or out past the engine's own airspace bounds.
+  if (m.alive && !m.body.active) { m.alive = false; }
 }
 
 /** Missile's own range/az/el from the ownship, for drawing on the scopes. */
@@ -97,7 +107,7 @@ export function missileRelative(world, m) {
  *  the round can actually pull in that time is negligible next to how
  *  short the pointer is drawn. */
 export function missileAheadPoint(m, aheadKm) {
-  const hRad = m.headingDeg * DEG, pRad = m.pitchDeg * DEG;
+  const hRad = m.headingDeg * Math.PI / 180, pRad = m.pitchDeg * Math.PI / 180;
   const d = aheadKm * 1000;
   return {
     x: m.x + Math.sin(hRad) * Math.cos(pRad) * d,

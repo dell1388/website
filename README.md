@@ -116,11 +116,30 @@ radar/
   content/targets.js  >>> THE FILE YOU EDIT TO ADD A RADAR TARGET <<<
   js/
     main.js           wires it together and runs the frame loop
-    core/             rng, atmosphere (mach<->m/s), input, storage
-    sim/              ownship + contacts, the radar set, missile flight
+    core/             rng, input, storage
+    engine/           the flight-physics engine (see below) - vec, physics,
+                       profiles, bodies, control, world
+    sim/              ownship + contacts (flown on the engine), the radar
+                       set, missile flight, the intercept-cue calculator
     render/           the B/C/E-scope drawers, the background terrain map
     ui/               HUD, the target dossier, the plane/tank chooser
 ```
+
+**The flight model is a real point-mass physics engine**, not kinematics -
+a JS port of [skysim](https://github.com/dell1388/bvr-sim): International
+Standard Atmosphere, thrust/drag/lift/weight, fixed-step RK4 integration,
+and an autopilot layer (heading/altitude/speed hold, proportional-navigation
+pursuit). Ownship and every "air" contact are engine bodies flying its
+`Mode.HEADING` autopilot - real banked turns and altitude/speed hold, not a
+fixed heading drift. Ground/sea contacts stay simple position data (they
+don't fly, and the engine's own ground-contact handling would just fight a
+stationary vehicle); each missile is a `Mode.PURSUE` body in its own small
+dedicated engine world, chasing a "phantom" stand-in synced to the real
+target's live position/velocity every tick (PURSUE steers toward a Body by
+id in the *same* engine world, and radar contacts don't live in the engine).
+`radar/js/engine/` is the engine itself - profile-driven and reusable for
+anything else that should fly on real physics; `radar/js/sim/world.js` and
+`missile.js` are where this game wires it in.
 
 **The radar teaches three real distinctions**, each with a target built
 around it:
@@ -142,11 +161,24 @@ around it:
   button) explains this per-target.
 
 **Missiles** are auto-selected by target class - AIM-7 Sparrow (air),
-AGM-84 Harpoon (surface), AGM-114L Hellfire (ground) - and modelled with a
-boost phase and a coast phase, each capped by its own max-G turn rate the
-guidance can't exceed (Sparrow is far more agile than the other two, per
-the brief; Harpoon barely turns at all). No range or fuel limit - see
-below. Ammo is finite per weapon (`js/sim/weapons.js`).
+AGM-84 Harpoon (surface), AGM-114L Hellfire (ground) - and are real engine
+bodies (`engine/profiles.js`) flying `Mode.PURSUE`: thrust burns fuel for a
+few tens of seconds, then the round coasts unpowered on stored energy and
+lift, same as a real weapon, rather than vanishing the instant the motor
+burns out. "Out of range" is a generous overall flight-time cap (a multiple
+of the burn time) as a safety valve against a round that can genuinely
+never catch its target - not the primary reachability gate. Sparrow is far
+more agile than the other two (`maxG` in its profile); Harpoon barely
+turns. Ammo is unlimited (`js/sim/weapons.js`'s `LOADOUT`).
+
+A **projected-intercept cue** (`js/sim/intercept.js`) runs the same engine,
+profile and guidance against the current selection - forecasting the
+target at its current velocity - to answer "if I fired now, would this
+connect, and when": a green diamond with a time-to-impact if so, a red
+slashed circle marked OUT if the shot would run out of road first. It's a
+forecast, not a real launch, and is recomputed a few times a second (it's
+a full physics simulation, not a cheap analytic guess) rather than every
+frame.
 
 Since the ownship flies a fixed straight line north forever (no player
 control over heading), a stationary target's closest possible range is
@@ -168,27 +200,35 @@ placing ground/sea targets; keep it in mind adding a new one.
 | `ALT` `G` | cycle mode |
 | `ALT` `S` | cycle scale |
 | `ALT` `F` | cycle pattern |
+| `ALT` `A` | centre the antenna |
 | `/` | target dossier |
+| `SWAP KEYS` button | swap which of arrows/WASD drives the gimbal vs. the pipper |
 | mode / scale / pattern buttons | click to change directly |
 
-The pipper is a second reticle, moved with WASD, that lives on the C-scope
-(az/el) and reaches anywhere in the gimbal envelope regardless of the
-current scan box - point it near a track and that track becomes the
-selection, same role `TAB` plays, just spatial instead of a list. It only
-grabs the selection while actually being moved, so leaving it resting near
-an old contact never fights a later `TAB` press.
+The pipper is a second reticle, moved with WASD (or, with `SWAP KEYS`,
+the arrows), that lives on the B-scope using its own axes - azimuth and
+range - and reaches anywhere in the gimbal envelope/current scale
+regardless of where the antenna's scan box is - point it near a track and
+that track becomes the selection, same role `TAB` plays, just spatial
+instead of a list. It only grabs the selection while actually being moved,
+so leaving it resting near an old contact never fights a later `TAB`
+press. Locking parks manual gimbal/pipper input entirely: the radar itself
+slaves the antenna straight onto the locked target every tick (see
+`sim/radar.js`), so the display updates smoothly instead of only stepping
+when the beam happens to sweep back over it.
 
 Two things worth knowing if you're editing the sim:
 
-- **Missiles don't run out of range or fuel.** A shot ends on a hit or when
-  the target dies - full stop. There's a very generous distance safety
-  valve (`MAX_FLIGHT_DISTANCE_M` in `weapons.js`) purely so a round that can
-  genuinely never catch a maneuvering target doesn't fly forever; it should
-  never be reachable in ordinary play.
 - **A stationary target still has to sit within reach.** The ownship flies
-  a fixed straight line, so a fixed target's closest possible range is its
-  crossrange offset, forever - that part hasn't changed even though the
-  *weapon's* range cap is gone. `content/targets.js` has more on this.
+  a fixed straight line north forever, so a fixed target's closest possible
+  range is its crossrange offset, forever - `content/targets.js` keeps this
+  in mind when placing ground/sea targets, and a target that falls far
+  enough behind respawns ahead instead of being lost for the rest of the
+  session (`sim/world.js`'s `respawnAhead`).
+- **A weapon's effective range comes from its engine profile, not a flat
+  number.** Tuning `engine/profiles.js` (thrust, fuel, `clMax`, `maxG`)
+  changes what's actually reachable - see the intercept cue for whether a
+  given shot is realistic before assuming a target's placement is wrong.
 
 ### Plane or tank?
 

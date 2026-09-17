@@ -153,15 +153,17 @@ class Game {
     this.missiles = this.missiles.filter((m) => m.alive);
 
     // Projected-intercept cue for whatever's selected right now - "if I
-    // fired on this, would it connect?" Recomputed here (not cached across
-    // frames) so it tracks a maneuvering air target's current heading.
-    this.cue = null;
-    if (radar.selectedId) {
+    // fired on this, would it connect?" This now runs a full engine forward
+    // simulation (see intercept.js) rather than a cheap analytic loop, so
+    // it's recomputed a few times a second - not every frame - and reused
+    // in between; a selection's reachability doesn't change fast enough to
+    // need a fresh answer every 16ms.
+    if (!radar.selectedId) {
+      this.cue = null;
+    } else if (world.time - (this._cueAt || -Infinity) >= 0.25) {
       const target = world.contacts.find((c) => c.id === radar.selectedId);
-      if (target && target.alive) {
-        const weaponId = WEAPON_BY_KIND[target.kind];
-        this.cue = simulateIntercept(world, weaponId, target);
-      }
+      this.cue = (target && target.alive) ? simulateIntercept(world, WEAPON_BY_KIND[target.kind], target) : null;
+      this._cueAt = world.time;
     }
 
     updateHud(world, radar, this.missiles, this.ammo);
