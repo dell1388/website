@@ -85,11 +85,11 @@ function renderStores(ammo) {
     const left = ammo[w.id];
     const unlimited = !isFinite(total);
     const rail = unlimited
-      ? '<i class="infinite">∞</i>'
+      ? ''
       : Array.from({ length: total }, (_, i) => `<i class="${i < left ? '' : 'spent'}"></i>`).join('');
     return `<div class="st${(unlimited || left > 0) ? ' on' : ''}">
       <span class="w">${w.label}</span><span class="rail">${rail}</span>
-      <span class="q">${unlimited ? '∞' : left}</span>
+      <span class="q">${unlimited ? '' : left}</span>
     </div>`;
   }).join('');
 }
