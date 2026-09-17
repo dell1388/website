@@ -5,6 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <meta name="description" content="A tank you drive with WASD. Shoot the target in each room to open a page." />
   <meta name="theme-color" content="#8a5a2e" />
+  <script>
+    // Silent preference redirect only - no dialogue here (removed on request).
+    // The tank/plane choice is offered once on /radar/'s first visit; a
+    // returning "plane" preference just sends the generic homepage there.
+    // Landing on /radar/ directly never bounces back the other way.
+    (function () {
+      try {
+        if (localStorage.getItem('garrison.pilot') === 'plane') {
+          location.replace('/radar/');
+        }
+      } catch (e) { /* storage blocked - just show the tank, no harm done */ }
+    })();
+  </script>
   <title>Garrison · drive, aim, breach</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -85,6 +98,7 @@
             <li><a href="/vehicle-spotter/">Vehicle Spotter</a></li>
             <li><a href="/classic.html">Field Notes</a></li>
           </ul>
+          <p class="switch-note">Prefer a radar screen? <a href="/radar/">Try the plane →</a></p>
         </section>
         <section>
           <h3>Controls</h3>

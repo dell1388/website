@@ -102,3 +102,71 @@ If the game script fails to load or throws on startup, a fallback panel with
 those plain links takes over the page - the front page never becomes a dead
 end. Saved state (visited rooms, mute, stats) goes through `garrison/core/storage.js`,
 which falls back to memory where `localStorage` is blocked.
+
+## The radar version (`/radar/`)
+
+Same idea as the tank, different vehicle: a top-down aircraft radar. Sweep
+the beam with the arrow keys, get a track, lock it, launch, and a hit opens
+that contact's page.
+
+```
+radar/
+  index.html          the radar shell + HUD markup
+  style.css           heavier military styling: phosphor green, stencil type
+  content/targets.js  >>> THE FILE YOU EDIT TO ADD A RADAR TARGET <<<
+  js/
+    main.js           wires it together and runs the frame loop
+    core/             rng, atmosphere (mach<->m/s), input, storage
+    sim/              ownship + contacts, the radar set, missile flight
+    render/           the B/C/E-scope drawers, the background terrain map
+    ui/               HUD, the target dossier, the plane/tank chooser
+```
+
+**The radar teaches three real distinctions**, each with a target built
+around it:
+
+- **B-scope** (azimuth vs range), **C-scope** (azimuth vs elevation) and
+  **E-scope** (range vs elevation) are three views of the same picture.
+- **SRC vs TWS**: SRC paints a contact and lets it fade; TWS remembers it as
+  a track that coasts between beam revisits - only a TWS mode can hold a
+  lock, so you can't launch out of a plain search mode.
+- **Mode gates what you can even see**: an air target only answers SRC/TWS,
+  a moving ground target only answers the GMTI modes, a fixed one only the
+  HDN modes, and a surface contact only TWS SEA. The dossier (`D`, or the
+  button) explains this per-target.
+
+**Missiles** are auto-selected by target class - AIM-7 Sparrow (air),
+AGM-84 Harpoon (surface), AGM-114L Hellfire (ground) - and modelled with a
+boost phase, a coast phase, a fuel-limited flight time, and a max-G turn
+rate the guidance can't exceed (Sparrow is far more agile than the other
+two, per the brief). Ammo is finite per weapon (`js/sim/weapons.js`).
+
+Since the ownship flies a fixed straight line north forever (no player
+control over heading), a stationary target's closest possible range is
+fixed at its crossrange offset for the whole flight - **that offset has to
+sit inside the assigned weapon's range**, or the shot is unwinnable no
+matter when it's fired. `content/targets.js` keeps this in mind when
+placing ground/sea targets; keep it in mind adding a new one.
+
+### Controls (radar)
+
+| key | |
+|---|---|
+| `←` `→` | antenna azimuth (±90°) |
+| `↑` `↓` | antenna elevation (±60°) |
+| `TAB` | step the selection through current tracks |
+| `ENTER` | lock / unlock the selection |
+| `SPACE` | launch at the lock |
+| `D` | target dossier |
+| mode / scale / pattern buttons | click to change; no keyboard shortcut on purpose (arrows are reserved for the gimbal) |
+
+### Plane or tank?
+
+Both front pages share one preference (`localStorage['garrison.pilot']`).
+`/radar/` asks once, on a machine that has never chosen, with the overlay
+you see on first load; picking TANK sends you to `/`, picking PLANE starts
+the sim and is remembered. `/` has **no such prompt** - dialogue-on-load was
+removed from the tank page earlier - but a returning "plane" preference
+silently sends the bare `/` straight to `/radar/`, and each page carries a
+plain link to the other (the tank's pause menu; the radar's header) so the
+switch is always available without a gate in front of it.

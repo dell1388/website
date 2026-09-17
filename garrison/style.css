@@ -566,3 +566,13 @@ kbd.wide { min-width: 62px; }
   .wood-btn, .trans-ring { animation: none !important; }
   * { transition-duration: 0.01ms !important; }
 }
+
+.switch-note {
+  text-align: center;
+  font-size: 15px;
+  color: var(--ink-soft);
+  opacity: 0.85;
+  padding: 10px 4px 0;
+}
+.switch-note a { color: var(--wood-dk); text-decoration: none; border-bottom: 1px dotted currentColor; }
+.switch-note a:hover { color: var(--red); }
