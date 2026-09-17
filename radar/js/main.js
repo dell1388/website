@@ -6,6 +6,7 @@ import { WEAPON_BY_KIND } from '../content/targets.js';
 import { LOADOUT } from './sim/weapons.js';
 import { MODES, SCALES_KM, PATTERNS } from './sim/config.js';
 import { launchMissile, tickMissile } from './sim/missile.js';
+import { simulateIntercept } from './sim/intercept.js';
 import { buildTerrain } from './render/map.js';
 import { drawB, drawC, drawE } from './render/scopes.js';
 import { Input } from './core/input.js';
@@ -151,10 +152,22 @@ class Game {
     }
     this.missiles = this.missiles.filter((m) => m.alive);
 
+    // Projected-intercept cue for whatever's selected right now - "if I
+    // fired on this, would it connect?" Recomputed here (not cached across
+    // frames) so it tracks a maneuvering air target's current heading.
+    this.cue = null;
+    if (radar.selectedId) {
+      const target = world.contacts.find((c) => c.id === radar.selectedId);
+      if (target && target.alive) {
+        const weaponId = WEAPON_BY_KIND[target.kind];
+        this.cue = simulateIntercept(world, weaponId, target);
+      }
+    }
+
     updateHud(world, radar, this.missiles, this.ammo);
-    drawB(this.canvasB, world, radar, this.missiles, this.terrain, world.time);
+    drawB(this.canvasB, world, radar, this.missiles, this.terrain, world.time, this.cue);
     drawC(this.canvasC, world, radar, this.missiles, world.time);
-    drawE(this.canvasE, world, radar, this.missiles, world.time);
+    drawE(this.canvasE, world, radar, this.missiles, world.time, this.cue);
   }
 
   _launch() {

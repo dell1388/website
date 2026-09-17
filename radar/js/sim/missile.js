@@ -2,10 +2,10 @@ import { MISSILES, FUZE_RADIUS_M } from './weapons.js';
 import { DEG, RAD, wrapDeg, clamp } from '../core/rng.js';
 import { relativeTo } from './world.js';
 
-const G_MPS2 = 9.81;
+export const G_MPS2 = 9.81;
 
 /** Shortest distance from point p to the segment a->b, in 3D. */
-function pointToSegmentDist3D(px, py, pz, ax, ay, az, bx, by, bz) {
+export function pointToSegmentDist3D(px, py, pz, ax, ay, az, bx, by, bz) {
   const abx = bx - ax, aby = by - ay, abz = bz - az;
   const apx = px - ax, apy = py - ay, apz = pz - az;
   const abLenSq = abx * abx + aby * aby + abz * abz;
@@ -13,7 +13,7 @@ function pointToSegmentDist3D(px, py, pz, ax, ay, az, bx, by, bz) {
   const cx = ax + abx * t, cy = ay + aby * t, cz = az + abz * t;
   return Math.hypot(px - cx, py - cy, pz - cz);
 }
-const DRAG_EASE = 0.18;   // how fast a coasting round settles onto cruise speed
+export const DRAG_EASE = 0.18;   // how fast a coasting round settles onto cruise speed
 
 /**
  * Launches a round of `weaponId` from the ownship at `target` (a live
@@ -89,6 +89,21 @@ export function tickMissile(world, m, dt) {
 /** Missile's own range/az/el from the ownship, for drawing on the scopes. */
 export function missileRelative(world, m) {
   return relativeTo(world.own, { x: m.x, y: m.y, altM: m.altM });
+}
+
+/** A point `aheadKm` along the missile's current heading/pitch - used to
+ *  draw a small direction-of-travel pointer on the scopes. Straight-line
+ *  projection (no guidance curvature); at these short lookaheads the turn
+ *  the round can actually pull in that time is negligible next to how
+ *  short the pointer is drawn. */
+export function missileAheadPoint(m, aheadKm) {
+  const hRad = m.headingDeg * DEG, pRad = m.pitchDeg * DEG;
+  const d = aheadKm * 1000;
+  return {
+    x: m.x + Math.sin(hRad) * Math.cos(pRad) * d,
+    y: m.y + Math.cos(hRad) * Math.cos(pRad) * d,
+    altM: m.altM + Math.sin(pRad) * d,
+  };
 }
 
 export function timeToImpactSec(world, m) {

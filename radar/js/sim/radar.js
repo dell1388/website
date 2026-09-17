@@ -133,8 +133,14 @@ export function tickRadar(r, world, dt) {
   const now = world.time;
 
   if (r.lockedId) {
-    const target = world.contacts.find((c) => c.id === r.lockedId);
-    if (target && target.alive) {
+    const id = r.lockedId;
+    const target = world.contacts.find((c) => c.id === id);
+    const prev = r.tracks.get(id);
+    // A behind-respawn or far-side wrap teleports the contact instead of
+    // moving it - a lock can't survive a jump like that (nothing physically
+    // flew there), so drop it and let search re-acquire normally.
+    const warped = target && prev && prev.warpGen !== undefined && prev.warpGen !== target.warpGen;
+    if (target && target.alive && !warped) {
       const rel = relativeTo(world.own, target);
       r.antAz = clamp(rel.az, -GIMBAL.azLimit, GIMBAL.azLimit);
       r.antEl = clamp(rel.el, -GIMBAL.elLimit, GIMBAL.elLimit);
@@ -142,11 +148,14 @@ export function tickRadar(r, world, dt) {
       const track = { az: rel.az, el: rel.el, rangeKm: rel.rangeKm, altM: target.altM,
                        name: target.name, kind: target.kind, accent: target.accent,
                        locked: target.locked, href: target.href, t: now,
-                       lastPaint: now, vAz: 0, vEl: 0, vRange: 0 };
-      r.tracks.set(target.id, track);
-      r.blips.set(target.id, { ...track });
+                       lastPaint: now, vAz: 0, vEl: 0, vRange: 0, warpGen: target.warpGen };
+      r.tracks.set(id, track);
+      r.blips.set(id, { ...track });
     } else {
       r.lockedId = null;
+      if (r.selectedId === id) { r.selectedId = null; }
+      r.tracks.delete(id);
+      r.blips.delete(id);
     }
   } else {
     advanceSweep(r, dt);
@@ -163,7 +172,7 @@ export function tickRadar(r, world, dt) {
 
       const paint = { az: rel.az, el: rel.el, rangeKm: rel.rangeKm, altM: c.altM,
                        name: c.name, kind: c.kind, accent: c.accent,
-                       locked: c.locked, href: c.href, t: now };
+                       locked: c.locked, href: c.href, t: now, warpGen: c.warpGen };
       r.blips.set(c.id, paint);
 
       if (m.tws) {

@@ -29,6 +29,9 @@ function makeContact(def, decorative) {
     x: def.x * KM, y: def.y * KM, altM: def.altM || 0,
     home: { x: def.x * KM, y: def.y * KM },
     alive: true,
+    // Bumped on any discontinuous jump (behind-respawn, far-side wrap) so a
+    // radar lock can tell "the target moved" apart from "the target teleported".
+    warpGen: 0,
   };
   if (c.kind === 'air') {
     c.headingDeg = def.headingDeg;
@@ -55,6 +58,7 @@ function respawnAhead(world, c) {
   const y = own.y + RESPAWN_MIN_M + world.rng() * (RESPAWN_MAX_M - RESPAWN_MIN_M);
   c.x = x; c.y = y;
   c.home.x = x; c.home.y = y;
+  c.warpGen = (c.warpGen || 0) + 1;
   if (c.kind === 'ground_mover') { c.wanderPhase = world.rng() * Math.PI * 2; }
 }
 
@@ -87,6 +91,7 @@ export function tickWorld(world, dt) {
         const back = Math.atan2(-dx, -dy);
         c.x = own.x + Math.sin(back) * AREA_KM * KM * 0.85;
         c.y = own.y + Math.cos(back) * AREA_KM * KM * 0.85;
+        c.warpGen = (c.warpGen || 0) + 1;
       }
     } else if (c.kind === 'ground_mover') {
       if (own.y - c.home.y > BEHIND_MARGIN_M) { respawnAhead(world, c); }

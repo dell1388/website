@@ -1,6 +1,7 @@
 import { GIMBAL } from '../sim/config.js';
 import { scaleKm, pattern, beamPos } from '../sim/radar.js';
-import { missileRelative } from '../sim/missile.js';
+import { missileRelative, missileAheadPoint } from '../sim/missile.js';
+import { relativeTo } from '../sim/world.js';
 import { projectFeature } from './map.js';
 import { P } from './palette.js';
 import { DEG } from '../core/rng.js';
@@ -61,6 +62,34 @@ function drawPipper(g, x, y) {
   g.stroke();
 }
 
+/** Small direction-of-travel pointer off a missile glyph, from its current
+ *  scope position `(x,y)` out to its projected position `(x2,y2)`. */
+function drawHeadingPointer(g, x, y, x2, y2, color) {
+  g.strokeStyle = color; g.lineWidth = 1.4; g.shadowColor = color; g.shadowBlur = 5;
+  g.beginPath(); g.moveTo(x, y); g.lineTo(x2, y2); g.stroke();
+  g.shadowBlur = 0;
+}
+
+/** Projected-intercept cue: where a shot fired right now would connect (or
+ *  run out of motor trying to). Hit reads as a small green diamond, a miss
+ *  as an amber ring with a short "OUT" tag - either way it's a forecast,
+ *  not a real hit, so it never plays the flash/hit effects a real one does. */
+function drawInterceptCue(g, x, y, hit, text) {
+  const color = hit ? '#2dff6a' : '#ff5a3c';
+  g.strokeStyle = color; g.fillStyle = color; g.lineWidth = 1.5;
+  g.shadowColor = color; g.shadowBlur = 6;
+  if (hit) {
+    g.beginPath();
+    g.moveTo(x, y - 7); g.lineTo(x + 7, y); g.lineTo(x, y + 7); g.lineTo(x - 7, y);
+    g.closePath(); g.stroke();
+  } else {
+    g.beginPath(); g.arc(x, y, 6, 0, Math.PI * 2); g.stroke();
+    g.beginPath(); g.moveTo(x - 5, y - 5); g.lineTo(x + 5, y + 5); g.stroke();
+  }
+  g.shadowBlur = 0;
+  if (text) { label(g, text, x + 9, y - 9, color, FONT_SM); }
+}
+
 /** Cheap, seedless, deterministic 0..1 noise - just for the E-scope's
  *  decorative ground clutter, which needs no world-space meaning at all. */
 function hash(n) {
@@ -71,7 +100,7 @@ function hash(n) {
 /* ------------------------------------------------------------ B-SCOPE */
 /* x = azimuth across the full mechanical gimbal travel, y = range (near
  * at the bottom, far at the top) - the classic B-scope layout. */
-export function drawB(cv, world, radar, missiles, terrain, time) {
+export function drawB(cv, world, radar, missiles, terrain, time, cue) {
   const { g, w, h } = fit(cv);
   g.clearRect(0, 0, w, h);
   const az0 = -GIMBAL.azLimit, az1 = GIMBAL.azLimit;
@@ -119,7 +148,20 @@ export function drawB(cv, world, radar, missiles, terrain, time) {
     if (!m.alive) { continue; }
     const rel = missileRelative(world, m);
     if (rel.rangeKm > maxR || Math.abs(rel.az) > GIMBAL.azLimit) { continue; }
-    drawMissile(g, X(rel.az), Y(rel.rangeKm), m, world);
+    const mx = X(rel.az), my = Y(rel.rangeKm);
+    const ahead = missileAheadPoint(m, maxR * 0.05);
+    const aheadRel = relativeTo(world.own, ahead);
+    drawHeadingPointer(g, mx, my, X(aheadRel.az), Y(aheadRel.rangeKm), m.w.color);
+    drawMissile(g, mx, my, m, world);
+  }
+
+  // projected-intercept cue for the current selection - where a shot fired
+  // right now would connect, or run out of motor trying to
+  if (cue && cue.point) {
+    const rel = relativeTo(world.own, cue.point);
+    if (rel.rangeKm <= maxR && Math.abs(rel.az) <= GIMBAL.azLimit) {
+      drawInterceptCue(g, X(rel.az), Y(rel.rangeKm), cue.hit, cue.hit ? `T+${Math.round(cue.t)}S` : 'OUT');
+    }
   }
 
   // ownship
@@ -176,7 +218,7 @@ export function drawC(cv, world, radar, missiles, time) {
  * range zero: at a fixed angle, altitude = range * tan(angle), which is
  * exactly a line through that pivot - swinging up and down as elevation
  * changes, never a level line. */
-export function drawE(cv, world, radar, missiles, time) {
+export function drawE(cv, world, radar, missiles, time, cue) {
   const { g, w, h } = fit(cv);
   g.clearRect(0, 0, w, h);
   const maxR = scaleKm(radar);
@@ -271,7 +313,19 @@ export function drawE(cv, world, radar, missiles, time) {
     if (!m.alive) { continue; }
     const rel = missileRelative(world, m);
     if (rel.rangeKm > maxR) { continue; }
-    drawMissile(g, X(rel.rangeKm), Y(m.altM), m, world);
+    const mx = X(rel.rangeKm), my = Y(m.altM);
+    const ahead = missileAheadPoint(m, maxR * 0.05);
+    const aheadRel = relativeTo(world.own, ahead);
+    drawHeadingPointer(g, mx, my, X(aheadRel.rangeKm), Y(ahead.altM), m.w.color);
+    drawMissile(g, mx, my, m, world);
+  }
+
+  // projected-intercept cue for the current selection
+  if (cue && cue.point) {
+    const rel = relativeTo(world.own, cue.point);
+    if (rel.rangeKm <= maxR) {
+      drawInterceptCue(g, X(rel.rangeKm), Y(cue.point.altM), cue.hit, cue.hit ? `T+${Math.round(cue.t)}S` : 'OUT');
+    }
   }
 
   // pipper cross-reference: just its range, the axis this scope shares with it

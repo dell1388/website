@@ -9,22 +9,27 @@
  *   - maxFlightSec models "range" as a motor/fuel burn time rather than a
  *     distance - a round that's still going when its clock runs out
  *     self-destructs instead of flying forever.
+ *
+ * Every round's whole speed profile (launch/boost/cruise) is doubled and
+ * its agility halved from the original tuning - faster but far less able
+ * to correct for a crossing or maneuvering target, which is what makes the
+ * projected-intercept cue on the scopes worth having.
  */
 export const MISSILES = {
   sparrow: {
     id: 'sparrow', label: 'AIM-7 SPARROW', forKind: 'air',
-    launchMps: 260, boostMps2: 210, boostSec: 3.2, cruiseMps: 850,
-    maxGTurn: 18, maxFlightSec: 80, color: '#ffb000',
+    launchMps: 520, boostMps2: 420, boostSec: 3.2, cruiseMps: 1700,
+    maxGTurn: 9, maxFlightSec: 80, color: '#ffb000',
   },
   harpoon: {
     id: 'harpoon', label: 'AGM-84 HARPOON', forKind: 'sea',
-    launchMps: 180, boostMps2: 90, boostSec: 4.5, cruiseMps: 290,
-    maxGTurn: 4, maxFlightSec: 300, color: '#3ec8ff',
+    launchMps: 360, boostMps2: 180, boostSec: 4.5, cruiseMps: 580,
+    maxGTurn: 2, maxFlightSec: 300, color: '#3ec8ff',
   },
   hellfire: {
     id: 'hellfire', label: 'AGM-114L LONGBOW', forKind: 'ground',
-    launchMps: 140, boostMps2: 140, boostSec: 2.0, cruiseMps: 380,
-    maxGTurn: 9, maxFlightSec: 130, color: '#ffe14d',
+    launchMps: 280, boostMps2: 280, boostSec: 2.0, cruiseMps: 760,
+    maxGTurn: 4.5, maxFlightSec: 130, color: '#ffe14d',
   },
 };
 
