@@ -1,8 +1,10 @@
 import { buildWorld, tickWorld } from './sim/world.js';
 import { createRadar, mode, setMode, setScale, setPattern, slewGimbal,
+         movePipper, updatePipperSelection,
          tickRadar, stepSelection, toggleLock } from './sim/radar.js';
 import { WEAPON_BY_KIND } from '../content/targets.js';
 import { LOADOUT } from './sim/weapons.js';
+import { MODES, SCALES_KM, PATTERNS } from './sim/config.js';
 import { launchMissile, tickMissile } from './sim/missile.js';
 import { buildTerrain } from './render/map.js';
 import { drawB, drawC, drawE } from './render/scopes.js';
@@ -36,11 +38,35 @@ class Game {
     document.getElementById('dosClose')?.addEventListener('click', () => this.dossier?.toggle(false));
     addEventListener('keydown', (e) => {
       if (e.code === 'Escape' && this.dossier?.isOpen()) { this.dossier.toggle(false); }
-      if (e.code === 'KeyD') { this.dossier?.toggle(); }
+      // Not KeyD: D also drives the pipper right, and every WASD tap would
+      // otherwise flip the dossier open. Slash ('/', as in "?" for help).
+      if (e.code === 'Slash') { this.dossier?.toggle(); }
+
+      // Alt+letter cycles a setting one step - arrows stay reserved for the
+      // gimbal and WASD for the pipper, so these live on the modifier.
+      if (!e.altKey) { return; }
+      if (e.code === 'KeyG') { e.preventDefault(); this._cycleMode(); }
+      else if (e.code === 'KeyS') { e.preventDefault(); this._cycleScale(); }
+      else if (e.code === 'KeyF') { e.preventDefault(); this._cyclePattern(); }
     });
 
     this.last = performance.now();
     requestAnimationFrame((t) => this._frame(t));
+  }
+
+  _cycleMode() {
+    setMode(this.radar, (this.radar.modeIndex + 1) % MODES.length);
+    toast(mode(this.radar).label, 'good');
+  }
+
+  _cycleScale() {
+    setScale(this.radar, (this.radar.scaleIndex + 1) % SCALES_KM.length);
+    toast(SCALES_KM[this.radar.scaleIndex] + ' KM');
+  }
+
+  _cyclePattern() {
+    setPattern(this.radar, (this.radar.patternIndex + 1) % PATTERNS.length);
+    toast(PATTERNS[this.radar.patternIndex].label);
   }
 
   _makeFlash() {
@@ -65,6 +91,14 @@ class Game {
     const { input, world, radar } = this;
 
     slewGimbal(radar, input.axis('ArrowLeft', 'ArrowRight'), input.axis('ArrowDown', 'ArrowUp'), dt);
+    const pipAz = input.axis('KeyA', 'KeyD'), pipEl = input.axis('KeyS', 'KeyW');
+    if (pipAz || pipEl) {
+      movePipper(radar, pipAz, pipEl, dt);
+      // Only claim the selection while the pipper is actually being steered -
+      // otherwise a pipper left resting near an old contact would silently
+      // fight a later TAB press every single frame.
+      updatePipperSelection(radar);
+    }
 
     const hadLock = radar.lockedId;
     tickWorld(world, dt);

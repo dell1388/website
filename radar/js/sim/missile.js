@@ -1,4 +1,4 @@
-import { MISSILES, FUZE_RADIUS_M } from './weapons.js';
+import { MISSILES, FUZE_RADIUS_M, MAX_FLIGHT_DISTANCE_M } from './weapons.js';
 import { DEG, RAD, wrapDeg, clamp } from '../core/rng.js';
 import { relativeTo } from './world.js';
 
@@ -79,8 +79,9 @@ export function tickMissile(world, m, dt) {
   const missDist = pointToSegmentDist3D(
     target.x, target.y, target.altM, oldX, oldY, oldAlt, m.x, m.y, m.altM);
   if (missDist < FUZE_RADIUS_M) { m.alive = false; m.hit = true; return; }
-  if (m.distanceM > m.w.rangeKm * 1000) { m.alive = false; return; }
-  if (m.t > m.w.fuelSec) { m.alive = false; return; }
+  // Not a range limit (there isn't one) - a safety valve against a round
+  // that can genuinely never catch its target flying forever. See weapons.js.
+  if (m.distanceM > MAX_FLIGHT_DISTANCE_M) { m.alive = false; return; }
 }
 
 /** Missile's own range/az/el from the ownship, for drawing on the scopes. */

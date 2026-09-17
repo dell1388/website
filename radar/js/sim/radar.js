@@ -1,4 +1,4 @@
-import { MODES, SCALES_KM, PATTERNS, GIMBAL, SWEEP_DEG_PER_SEC,
+import { MODES, SCALES_KM, PATTERNS, GIMBAL, PIPPER, SWEEP_DEG_PER_SEC,
          BLIP_FADE_SEC, TRACK_COAST_SEC } from './config.js';
 import { relativeTo } from './world.js';
 import { clamp, wrapDeg } from '../core/rng.js';
@@ -17,6 +17,7 @@ export function createRadar() {
     modeIndex: 1, scaleIndex: 3, patternIndex: 2,   // TWS, 100km, 60x10
     antAz: 0, antEl: -5,
     sweepAz: 0, sweepDir: 1, barIndex: 0, barEl: 0,
+    pipperAz: 0, pipperEl: -5,
     blips: new Map(),       // id -> { az, el, rangeKm, altM, name, kind, t }
     tracks: new Map(),      // id -> { ...blip fields, vAz, vEl, vRange, lastPaint }
     selectedId: null,
@@ -46,6 +47,28 @@ export function setPattern(r, i) {
 export function slewGimbal(r, azAxis, elAxis, dt) {
   r.antAz = clamp(r.antAz + azAxis * GIMBAL.slewDegPerSec * dt, -GIMBAL.azLimit, GIMBAL.azLimit);
   r.antEl = clamp(r.antEl + elAxis * GIMBAL.slewDegPerSec * dt, -GIMBAL.elLimit, GIMBAL.elLimit);
+}
+
+/** Move the pipper (selection reticle) the same way, but independently of
+ *  the antenna and free to roam the whole gimbal envelope. */
+export function movePipper(r, azAxis, elAxis, dt) {
+  r.pipperAz = clamp(r.pipperAz + azAxis * PIPPER.slewDegPerSec * dt, -GIMBAL.azLimit, GIMBAL.azLimit);
+  r.pipperEl = clamp(r.pipperEl + elAxis * PIPPER.slewDegPerSec * dt, -GIMBAL.elLimit, GIMBAL.elLimit);
+}
+
+/**
+ * Whatever live track sits closest to the pipper "grabs" the selection.
+ * If nothing is within range of it, the existing selection (however it got
+ * there - TAB or an earlier pipper pass) is left alone rather than cleared,
+ * so drifting the reticle through a gap doesn't cost you your pick.
+ */
+export function updatePipperSelection(r) {
+  let bestId = null, bestDist = PIPPER.selectRadiusDeg;
+  for (const [id, t] of r.tracks) {
+    const d = Math.hypot(wrapDeg(t.az - r.pipperAz), t.el - r.pipperEl);
+    if (d < bestDist) { bestDist = d; bestId = id; }
+  }
+  if (bestId) { r.selectedId = bestId; }
 }
 
 /** Current instantaneous beam centre, in absolute (nose-relative) degrees. */

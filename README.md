@@ -126,20 +126,27 @@ radar/
 around it:
 
 - **B-scope** (azimuth vs range), **C-scope** (azimuth vs elevation) and
-  **E-scope** (range vs elevation) are three views of the same picture.
+  **E-scope** (range vs altitude, in metres) are three views of the same
+  picture. The antenna's elevation is still an angle, so on the E-scope the
+  beam and the scan box are drawn as radial lines pivoting out of the
+  ownship's own altitude at zero range - altitude = range × tan(angle) - so
+  they visibly swing up and down as elevation changes, never a level line.
+  A scattering of dim ground-clutter dots near the bottom is purely for
+  orientation (it isn't a real return, and doesn't try to be).
 - **SRC vs TWS**: SRC paints a contact and lets it fade; TWS remembers it as
   a track that coasts between beam revisits - only a TWS mode can hold a
   lock, so you can't launch out of a plain search mode.
 - **Mode gates what you can even see**: an air target only answers SRC/TWS,
   a moving ground target only answers the GMTI modes, a fixed one only the
-  HDN modes, and a surface contact only TWS SEA. The dossier (`D`, or the
+  HDN modes, and a surface contact only TWS SEA. The dossier (`/`, or the
   button) explains this per-target.
 
 **Missiles** are auto-selected by target class - AIM-7 Sparrow (air),
 AGM-84 Harpoon (surface), AGM-114L Hellfire (ground) - and modelled with a
-boost phase, a coast phase, a fuel-limited flight time, and a max-G turn
-rate the guidance can't exceed (Sparrow is far more agile than the other
-two, per the brief). Ammo is finite per weapon (`js/sim/weapons.js`).
+boost phase and a coast phase, each capped by its own max-G turn rate the
+guidance can't exceed (Sparrow is far more agile than the other two, per
+the brief; Harpoon barely turns at all). No range or fuel limit - see
+below. Ammo is finite per weapon (`js/sim/weapons.js`).
 
 Since the ownship flies a fixed straight line north forever (no player
 control over heading), a stationary target's closest possible range is
@@ -154,11 +161,34 @@ placing ground/sea targets; keep it in mind adding a new one.
 |---|---|
 | `←` `→` | antenna azimuth (±90°) |
 | `↑` `↓` | antenna elevation (±60°) |
+| `W` `A` `S` `D` | the pipper - a selection reticle, independent of the antenna |
 | `TAB` | step the selection through current tracks |
 | `ENTER` | lock / unlock the selection |
 | `SPACE` | launch at the lock |
-| `D` | target dossier |
-| mode / scale / pattern buttons | click to change; no keyboard shortcut on purpose (arrows are reserved for the gimbal) |
+| `ALT` `G` | cycle mode |
+| `ALT` `S` | cycle scale |
+| `ALT` `F` | cycle pattern |
+| `/` | target dossier |
+| mode / scale / pattern buttons | click to change directly |
+
+The pipper is a second reticle, moved with WASD, that lives on the C-scope
+(az/el) and reaches anywhere in the gimbal envelope regardless of the
+current scan box - point it near a track and that track becomes the
+selection, same role `TAB` plays, just spatial instead of a list. It only
+grabs the selection while actually being moved, so leaving it resting near
+an old contact never fights a later `TAB` press.
+
+Two things worth knowing if you're editing the sim:
+
+- **Missiles don't run out of range or fuel.** A shot ends on a hit or when
+  the target dies - full stop. There's a very generous distance safety
+  valve (`MAX_FLIGHT_DISTANCE_M` in `weapons.js`) purely so a round that can
+  genuinely never catch a maneuvering target doesn't fly forever; it should
+  never be reachable in ordinary play.
+- **A stationary target still has to sit within reach.** The ownship flies
+  a fixed straight line, so a fixed target's closest possible range is its
+  crossrange offset, forever - that part hasn't changed even though the
+  *weapon's* range cap is gone. `content/targets.js` has more on this.
 
 ### Plane or tank?
 

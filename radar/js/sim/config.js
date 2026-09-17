@@ -27,6 +27,13 @@ export const GIMBAL = {
   slewDegPerSec: 70,        // arrow-key slew rate
 };
 
+/** The WASD-driven selection reticle - independent of the antenna, and free
+ *  to roam the whole gimbal envelope regardless of the current scan box. */
+export const PIPPER = {
+  slewDegPerSec: 85,
+  selectRadiusDeg: 6,       // how close it has to sit to a track to grab it
+};
+
 /** Beam sweep speed in degrees/second of azimuth travel. */
 export const SWEEP_DEG_PER_SEC = 46;
 

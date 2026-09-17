@@ -3,10 +3,15 @@ import { scaleKm, pattern, beamPos } from '../sim/radar.js';
 import { missileRelative } from '../sim/missile.js';
 import { projectFeature } from './map.js';
 import { P } from './palette.js';
+import { DEG } from '../core/rng.js';
 
 const DPR = Math.min(2, devicePixelRatio || 1);
 const FONT = '11px "Share Tech Mono", monospace';
 const FONT_SM = '10px "Share Tech Mono", monospace';
+
+/** E-scope's vertical span is a fixed altitude window in metres, not the
+ *  gimbal's elevation limit - see drawE(). */
+const ALT_MIN = 0, ALT_MAX = 12000;
 
 function fit(cv) {
   const r = cv.parentElement.getBoundingClientRect();
@@ -42,6 +47,25 @@ function drawGlyph(g, kind, x, y, s, color) {
     g.fillRect(x - s * 0.85, y - s * 0.85, s * 1.7, s * 1.7);
   }
   g.shadowBlur = 0;
+}
+
+/** A crosshair reticle - the WASD-driven pipper used to select a track. */
+function drawPipper(g, x, y) {
+  g.strokeStyle = '#eafff5'; g.lineWidth = 1.4;
+  g.beginPath(); g.arc(x, y, 9, 0, Math.PI * 2); g.stroke();
+  g.beginPath();
+  g.moveTo(x - 15, y); g.lineTo(x - 5, y);
+  g.moveTo(x + 5, y); g.lineTo(x + 15, y);
+  g.moveTo(x, y - 15); g.lineTo(x, y - 5);
+  g.moveTo(x, y + 5); g.lineTo(x, y + 15);
+  g.stroke();
+}
+
+/** Cheap, seedless, deterministic 0..1 noise - just for the E-scope's
+ *  decorative ground clutter, which needs no world-space meaning at all. */
+function hash(n) {
+  n = (n << 13) ^ n;
+  return ((n * (n * n * 15731 + 789221) + 1376312589) & 0x7fffffff) / 0x7fffffff;
 }
 
 /* ------------------------------------------------------------ B-SCOPE */
@@ -89,6 +113,11 @@ export function drawB(cv, world, radar, missiles, terrain, time) {
   g.strokeStyle = 'rgba(196,255,214,.9)'; g.lineWidth = 1.5;
   g.beginPath(); g.moveTo(bx, 0); g.lineTo(bx, h); g.stroke();
 
+  // pipper cross-reference: just its azimuth, for continuity with the C-scope
+  g.strokeStyle = 'rgba(234,255,245,.55)'; g.setLineDash([2, 3]); g.lineWidth = 1.2;
+  g.beginPath(); g.moveTo(X(radar.pipperAz), 0); g.lineTo(X(radar.pipperAz), h); g.stroke();
+  g.setLineDash([]);
+
   drawContacts(g, radar, world.time, X, Y, (c) => c.az, (c) => c.rangeKm, true);
 
   for (const m of missiles) {
@@ -104,7 +133,9 @@ export function drawB(cv, world, radar, missiles, terrain, time) {
 }
 
 /* ------------------------------------------------------------ C-SCOPE */
-/* x = azimuth, y = elevation - the whole gimbal envelope. */
+/* x = azimuth, y = elevation - the whole gimbal envelope. This is the
+ * pipper's home view: a straight az/el plot, exactly what a crosshair
+ * reticle wants. */
 export function drawC(cv, world, radar, missiles, time) {
   const { g, w, h } = fit(cv);
   g.clearRect(0, 0, w, h);
@@ -131,40 +162,86 @@ export function drawC(cv, world, radar, missiles, time) {
     if (Math.abs(rel.az) > GIMBAL.azLimit || Math.abs(rel.el) > GIMBAL.elLimit) { continue; }
     drawMissile(g, X(rel.az), Y(rel.el), m, world);
   }
+
+  drawPipper(g, X(radar.pipperAz), Y(radar.pipperEl));
+
   label(g, '-90', 4, h - 6, P.greenDim); label(g, '+90', w - 30, h - 6, P.greenDim); label(g, '+60', 4, 14, P.greenDim);
 }
 
 /* ------------------------------------------------------------ E-SCOPE */
-/* x = range, y = elevation. */
+/* x = range, y = altitude in metres (not elevation angle - a fixed window
+ * on the world, same units contacts and missiles actually live in). The
+ * antenna's elevation is still an angle, so the beam and the scan box are
+ * drawn as radial lines pivoting out of the ownship's own altitude at
+ * range zero: at a fixed angle, altitude = range * tan(angle), which is
+ * exactly a line through that pivot - swinging up and down as elevation
+ * changes, never a level line. */
 export function drawE(cv, world, radar, missiles, time) {
   const { g, w, h } = fit(cv);
   g.clearRect(0, 0, w, h);
   const maxR = scaleKm(radar);
+  const ownAlt = world.own.altM;
   const X = (rn) => Math.min(1, rn / maxR) * w;
-  const Y = (el) => (1 - (el + GIMBAL.elLimit) / (2 * GIMBAL.elLimit)) * h;
+  const Y = (altM) => h - Math.min(1, Math.max(0, (altM - ALT_MIN) / (ALT_MAX - ALT_MIN))) * h;
+  const pivotAlt = (angleDeg, rangeKm) => ownAlt + rangeKm * 1000 * Math.tan(angleDeg * DEG);
+  const radial = (angleDeg, color, dash) => {
+    g.strokeStyle = color;
+    if (dash) { g.setLineDash(dash); }
+    g.beginPath(); g.moveTo(X(0), Y(ownAlt)); g.lineTo(X(maxR), Y(pivotAlt(angleDeg, maxR))); g.stroke();
+    if (dash) { g.setLineDash([]); }
+  };
+
   grid(g, w, h, 8, 4);
-  g.strokeStyle = P.greenDim; g.beginPath(); g.moveTo(0, Y(0)); g.lineTo(w, Y(0)); g.stroke();
-  label(g, '0°', 4, Y(0) - 5, P.greenDim);
+  for (let i = 0; i <= 4; i++) {
+    const alt = ALT_MIN + (ALT_MAX - ALT_MIN) * i / 4;
+    label(g, Math.round(alt) + ' M', 5, Y(alt) - 5, P.greenDim);
+  }
   for (let i = 1; i <= 3; i++) { label(g, Math.round(maxR * i / 4), X(maxR * i / 4) - 10, h - 6, P.greenDim); }
   label(g, maxR + ' KM', w - 46, h - 6, P.greenDim);
 
-  const pat = pattern(radar);
-  g.strokeStyle = 'rgba(255,176,0,.55)'; g.setLineDash([4, 3]); g.lineWidth = 1.2;
-  g.beginPath(); g.moveTo(0, Y(radar.antEl + pat.el)); g.lineTo(w, Y(radar.antEl + pat.el)); g.stroke();
-  g.beginPath(); g.moveTo(0, Y(radar.antEl - pat.el)); g.lineTo(w, Y(radar.antEl - pat.el)); g.stroke();
+  // decorative ground clutter - purely for orientation, not a real return.
+  // Density is a fraction of the current scale so it reads the same at any
+  // zoom, not spaced against a fixed world distance.
+  // Flat, glow-less dots wash out against the CRT scanline/vignette
+  // overlay - every real return on these scopes gets a shadowBlur glow to
+  // read against that texture, so clutter needs the same treatment.
+  const N_CLUTTER = 130;
+  g.shadowColor = P.green; g.fillStyle = P.green;
+  for (let i = 0; i < N_CLUTTER; i++) {
+    const h1 = hash(i), h2 = hash(i + 7331), h3 = hash(i + 91711);
+    const rangeKm = ((i + h1) / N_CLUTTER) * maxR;
+    const altM = h2 * 900;
+    const twinkle = 0.5 + 0.5 * Math.sin(time * 2.4 + i * 1.7);
+    g.globalAlpha = 0.45 + 0.4 * twinkle * (0.5 + 0.5 * h3);
+    g.shadowBlur = 3 + h3 * 2;
+    const s = 2 + h3 * 1.4;
+    g.fillRect(X(rangeKm) - s / 2, Y(altM) - s / 2, s, s);
+  }
+  g.shadowBlur = 0; g.globalAlpha = 1;
+
+  // own-altitude reference. Offset well clear of the left-edge tick labels
+  // (x=5) since ownAlt can legitimately land exactly on a gridline value.
+  g.strokeStyle = 'rgba(234,255,245,.4)'; g.setLineDash([2, 4]); g.lineWidth = 1;
+  g.beginPath(); g.moveTo(0, Y(ownAlt)); g.lineTo(w, Y(ownAlt)); g.stroke();
   g.setLineDash([]);
+  label(g, 'OWN ' + Math.round(ownAlt) + 'M', 62, Y(ownAlt) - 5, 'rgba(234,255,245,.6)');
 
+  // scan box, swinging on the same pivot as the beam
+  const pat = pattern(radar);
+  radial(radar.antEl + pat.el, 'rgba(255,176,0,.55)', [4, 3]);
+  radial(radar.antEl - pat.el, 'rgba(255,176,0,.55)', [4, 3]);
+
+  // the beam itself, pivoting up and down with elevation - not a level line
   const beam = beamPos(radar);
-  g.strokeStyle = 'rgba(196,255,214,.85)'; g.lineWidth = 1.5;
-  g.beginPath(); g.moveTo(0, Y(beam.el)); g.lineTo(w, Y(beam.el)); g.stroke();
+  radial(beam.el, 'rgba(196,255,214,.85)');
 
-  drawContacts(g, radar, world.time, X, Y, (c) => c.rangeKm, (c) => c.el, false);
+  drawContacts(g, radar, world.time, X, Y, (c) => c.rangeKm, (c) => c.altM, false);
 
   for (const m of missiles) {
     if (!m.alive) { continue; }
     const rel = missileRelative(world, m);
-    if (rel.rangeKm > maxR || Math.abs(rel.el) > GIMBAL.elLimit) { continue; }
-    drawMissile(g, X(rel.rangeKm), Y(rel.el), m, world);
+    if (rel.rangeKm > maxR) { continue; }
+    drawMissile(g, X(rel.rangeKm), Y(m.altM), m, world);
   }
 }
 

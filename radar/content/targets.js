@@ -95,7 +95,11 @@ export const TARGETS = [
 
 /** Decorative practice contacts - lockable and shootable, open nothing. */
 export const BOGEYS = [
-  { id: 'bogey1', name: 'BOGEY 1', kind: 'air', x: 70, y: 55, altM: 4200, headingDeg: 260, mach: 1.05 },
+  // Placed so it sits inside the default antenna box (TWS, 60x10, boresight
+  // dead ahead) the instant the page loads - the beam's own idle sweep finds
+  // it within a couple of seconds with no player input, proving the radar
+  // works before anyone has to learn how to search with it.
+  { id: 'bogey1', name: 'BOGEY 1', kind: 'air', x: 5, y: 29, altM: 4400, headingDeg: 260, mach: 1.05 },
   { id: 'bogey2', name: 'BOGEY 2', kind: 'air', x: -60, y: 80, altM: 1200, headingDeg: 95, mach: 0.82 },
 ];
 

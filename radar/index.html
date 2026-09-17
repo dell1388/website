@@ -17,7 +17,7 @@
 <header>
   <div class="frame brand">
     <b>GARRISON</b>
-    <span class="plate">AN/APG-71<br>NOT FOR NAV · GAME</span>
+    <span class="plate">AN/APG-71<br>SIMULATION</span>
   </div>
   <div class="frame state">
     <div class="cell"><i>mach</i><b id="rMach">1.20</b></div>
@@ -33,8 +33,6 @@
   </div>
 </header>
 
-<div class="hazard"></div>
-
 <main>
   <div class="bwrap">
     <div class="frame scope">
@@ -42,7 +40,7 @@
       <canvas id="bscope"></canvas>
     </div>
     <div class="frame scope" style="height:168px">
-      <span class="cap">E-SCOPE · RNG / EL</span><span class="cap r">± 60°</span>
+      <span class="cap">E-SCOPE · RNG / ALT</span><span class="cap r">0–12,000 M</span>
       <canvas id="escope"></canvas>
     </div>
   </div>
@@ -77,13 +75,17 @@
   </div>
   <div class="frame keys">
     <span class="cap">CONTROLS</span>
-    <button class="btn alert" id="dossierBtn">▤ DOSSIER</button>
+    <button class="btn alert" id="dossierBtn">▤ DOSSIER (/)</button>
     <a class="btn" href="/" style="text-decoration:none;display:inline-block">⇄ TANK</a>
     <span><b>← →</b>antenna az</span>
     <span><b>↑ ↓</b>antenna el</span>
+    <span><b>W A S D</b>pipper</span>
     <span><b>TAB</b>step track</span>
     <span><b>ENTER</b>lock</span>
     <span><b>SPACE</b>launch</span>
+    <span><b>ALT G</b>mode</span>
+    <span><b>ALT S</b>scale</span>
+    <span><b>ALT F</b>pattern</span>
   </div>
 </footer>
 
@@ -96,7 +98,6 @@
         <h2>TARGET DOSSIER</h2>
         <p>ANNEX B · KNOWN CONTACTS IN THE OPERATING AREA</p>
       </div>
-      <div class="dos-class">RESTRICTED</div>
     </div>
     <div class="dos-grid dos-hrow">
       <span>DESIGNATION</span><span>CLASS</span><span>ACQUIRE IN</span><span>PROFILE</span><span>OPENS</span>
