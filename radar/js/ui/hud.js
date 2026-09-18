@@ -1,4 +1,3 @@
-import { MODES, SCALES_KM, PATTERNS, patternRangeFor } from '../sim/config.js';
 import { mode, scaleKm, pattern } from '../sim/radar.js';
 import { MISSILES, LOADOUT } from '../sim/weapons.js';
 import { timeToImpactSec } from '../sim/missile.js';
@@ -7,10 +6,14 @@ const $ = (id) => document.getElementById(id);
 const KIND_SYM = { air: '◇', sea: '⬢', ground_fixed: '▣', ground_mover: '▣' };
 const KIND_CLASS = { air: 'air', sea: 'sea', ground_fixed: 'gnd', ground_mover: 'gnd' };
 
-export function buildButtonGroups({ onMode, onScale, onPattern, onSelectWeapon }) {
-  fillGroup('modeGroup', MODES.map((m) => m.label), onMode);
-  fillGroup('scaleGroup', SCALES_KM.map((s) => String(s)), onScale);
-  fillGroup('patternGroup', PATTERNS.map((p) => p.label), onPattern);
+/** MODE/SCALE/PATTERN are single click-to-cycle indicators, not a button
+ *  per option - MODE alone has 9 possible values, which is exactly what
+ *  used to blow the footer's layout out. Same cycle the ALT+G/S/F
+ *  shortcuts already drive. */
+export function buildButtonGroups({ onCycleMode, onCycleScale, onCyclePattern, onSelectWeapon }) {
+  bindCycle('modeInd', onCycleMode);
+  bindCycle('scaleInd', onCycleScale);
+  bindCycle('patternInd', onCyclePattern);
 
   // One delegated listener rather than re-binding per row - renderStores
   // rebuilds #storesList's innerHTML every tick, so per-element listeners
@@ -24,30 +27,9 @@ export function buildButtonGroups({ onMode, onScale, onPattern, onSelectWeapon }
   }
 }
 
-function fillGroup(id, labels, onPick) {
+function bindCycle(id, onCycle) {
   const el = $(id);
-  if (!el) { return; }
-  labels.forEach((label, i) => {
-    const b = document.createElement('button');
-    b.className = 'btn'; b.textContent = label; b.dataset.i = i;
-    b.addEventListener('click', () => { onPick(i); b.blur(); });
-    el.appendChild(b);
-  });
-}
-
-function highlightGroup(id, index) {
-  const el = $(id);
-  if (!el) { return; }
-  [...el.querySelectorAll('.btn')].forEach((b, i) => b.classList.toggle('on', i === index));
-}
-
-/** Grey out (and actually disable) patterns the current mode can't fly -
- *  SRC never gets the tightest box, TWS never gets the widest. */
-function markPatternAvailability(radarMode) {
-  const el = $('patternGroup');
-  if (!el) { return; }
-  const [lo, hi] = patternRangeFor(radarMode);
-  [...el.querySelectorAll('.btn')].forEach((b, i) => { b.disabled = i < lo || i > hi; });
+  if (el && onCycle) { el.addEventListener('click', () => { onCycle(); el.blur(); }); }
 }
 
 export function updateHud(world, radar, missiles, ammo, selectedWeapon) {
@@ -70,10 +52,9 @@ export function updateHud(world, radar, missiles, ammo, selectedWeapon) {
     set('rTti', '--:--');
   }
 
-  highlightGroup('modeGroup', radar.modeIndex);
-  highlightGroup('scaleGroup', radar.scaleIndex);
-  highlightGroup('patternGroup', radar.patternIndex);
-  markPatternAvailability(mode(radar));
+  set('modeInd', mode(radar).label);
+  set('scaleInd', scaleKm(radar) + ' KM');
+  set('patternInd', pattern(radar).label);
 
   renderTracks(radar);
   renderStores(ammo, selectedWeapon);

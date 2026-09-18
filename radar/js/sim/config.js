@@ -6,7 +6,7 @@
  * actually be shrinking - see world.js's `isApproaching`.
  *
  * SRC and TWS aren't just "the same search with or without a memory" - see
- * `patternRangeFor` below for how their available patterns differ, and
+ * `patternsFor` below for how their available patterns differ, and
  * `centerGimbal` in radar.js for why only a TWS mode can auto-recentre.
  *
  * HDN ("head-on") is for picking an approaching aircraft out of the sky,
@@ -30,25 +30,30 @@ export const MODES = [
 
 export const SCALES_KM = [10, 25, 50, 100];
 
-/** { az, el } half-angle of the search box, and how many elevation bars it
- *  takes to fill it - a wider pattern revisits any one spot less often. */
-export const PATTERNS = [
-  { label: '15×15', az: 7.5,  el: 7.5,  bars: 4 },
-  { label: '30×15', az: 15,   el: 7.5,  bars: 4 },
-  { label: '60×10', az: 30,   el: 5,    bars: 2 },
-  { label: '120×5', az: 60,   el: 2.5,  bars: 1 },
+/**
+ * { az, el } half-angle of the search box, and how many elevation bars it
+ * takes to fill it - a wider pattern revisits any one spot less often.
+ *
+ * SRC and TWS get entirely separate pattern sets, not just a shared list
+ * sliced two ways: SRC sweeps a wide volume at a low revisit rate (fine,
+ * since it isn't trying to keep a track alive between passes), while TWS
+ * narrows the box to revisit often enough to actually maintain one.
+ */
+export const SRC_PATTERNS = [
+  { label: '30×30',  az: 15,  el: 15,   bars: 5 },
+  { label: '30×70',  az: 15,  el: 35,   bars: 12 },
+  { label: '120×15', az: 60,  el: 7.5,  bars: 3 },
+  { label: '180×10', az: 90,  el: 5,    bars: 2 },
 ];
 
-/**
- * SRC and TWS get different jobs, not just a memory toggle: SRC sweeps a
- * wide volume at a low revisit rate (fine, since it isn't trying to keep a
- * track alive between passes), while TWS narrows the box to revisit often
- * enough to actually maintain one - it never gets the widest pattern, and
- * SRC never gets the tightest. Index into `PATTERNS`, inclusive.
- */
-export const SRC_PATTERN_RANGE = [1, 3];   // 30x15 .. 120x5
-export const TWS_PATTERN_RANGE = [0, 2];   // 15x15 .. 60x10
-export const patternRangeFor = (m) => (m.tws ? TWS_PATTERN_RANGE : SRC_PATTERN_RANGE);
+export const TWS_PATTERNS = [
+  { label: '15×15', az: 7.5, el: 7.5, bars: 4 },
+  { label: '30×15', az: 15,  el: 7.5, bars: 4 },
+  { label: '60×10', az: 30,  el: 5,   bars: 2 },
+  { label: '120×5', az: 60,  el: 2.5, bars: 1 },
+];
+
+export const patternsFor = (m) => (m.tws ? TWS_PATTERNS : SRC_PATTERNS);
 
 export const GIMBAL = {
   azLimit: 90, elLimit: 60,

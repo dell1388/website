@@ -1,5 +1,5 @@
-import { MODES, SCALES_KM, PATTERNS, GIMBAL, PIPPER, SWEEP_DEG_PER_SEC,
-         BLIP_FADE_SEC, TRACK_COAST_SEC, patternRangeFor } from './config.js';
+import { MODES, SCALES_KM, GIMBAL, PIPPER, SWEEP_DEG_PER_SEC,
+         BLIP_FADE_SEC, TRACK_COAST_SEC, patternsFor } from './config.js';
 import { relativeTo, isApproaching } from './world.js';
 import { clamp, wrapDeg } from '../core/rng.js';
 
@@ -28,7 +28,7 @@ export function createRadar() {
 
 export const mode = (r) => MODES[r.modeIndex];
 export const scaleKm = (r) => SCALES_KM[r.scaleIndex];
-export const pattern = (r) => PATTERNS[r.patternIndex];
+export const pattern = (r) => patternsFor(mode(r))[r.patternIndex];
 
 /**
  * Keep the antenna such that its whole scan box (antAz +/- pattern.az,
@@ -48,10 +48,9 @@ export function setMode(r, i) {
   r.blips.clear(); r.tracks.clear();
   r.selectedId = null; r.lockedId = null;
   r.barIndex = 0; r.sweepAz = 0; r.sweepDir = 1;
-  // Switching into a SRC mode can leave a TWS-only pattern selected (or
-  // vice versa) - snap it into whatever the new mode actually allows.
-  const [lo, hi] = patternRangeFor(mode(r));
-  r.patternIndex = clamp(r.patternIndex, lo, hi);
+  // SRC and TWS each index into their own pattern list now - snap the index
+  // into whatever the new mode's list actually has.
+  r.patternIndex = clamp(r.patternIndex, 0, patternsFor(mode(r)).length - 1);
   clampToScanBox(r);
 }
 export function setScale(r, i) {
@@ -59,8 +58,7 @@ export function setScale(r, i) {
   r.pipperRangeKm = clamp(r.pipperRangeKm, 0, scaleKm(r));
 }
 export function setPattern(r, i) {
-  const [lo, hi] = patternRangeFor(mode(r));
-  r.patternIndex = clamp(i, lo, hi);
+  r.patternIndex = clamp(i, 0, patternsFor(mode(r)).length - 1);
   r.barIndex = 0; r.sweepAz = 0; r.sweepDir = 1;
   clampToScanBox(r);   // a wider pattern can make the current antenna position invalid
 }

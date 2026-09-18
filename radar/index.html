@@ -66,34 +66,57 @@
 <footer>
   <div class="frame group" id="modeGroup">
     <span class="cap">MODE</span>
+    <button class="btn indicator" id="modeInd" title="Click to cycle (ALT G)">TWS</button>
   </div>
   <div class="frame group" id="scaleGroup">
     <span class="cap">SCALE</span>
+    <button class="btn indicator" id="scaleInd" title="Click to cycle (ALT S)">100 KM</button>
   </div>
   <div class="frame group" id="patternGroup">
     <span class="cap">PATTERN</span>
+    <button class="btn indicator" id="patternInd" title="Click to cycle (ALT F)">60×10</button>
   </div>
   <div class="frame keys">
     <span class="cap">CONTROLS</span>
     <button class="btn alert" id="dossierBtn">▤ DOSSIER (/)</button>
+    <button class="btn" id="ctrlBtn">⌨ CONTROLS (C)</button>
     <button class="btn" id="swapBtn" title="Swap which keys drive the gimbal vs. the pipper">⇄ SWAP KEYS</button>
     <a class="btn" href="/" style="text-decoration:none;display:inline-block">⇄ TANK</a>
     <a class="btn" href="/radarworld/" style="text-decoration:none;display:inline-block">⇄ WORLD VIEW</a>
-    <span><b>← →</b><span class="lbl" id="hintArrowAz">antenna az</span></span>
-    <span><b>↑ ↓</b><span class="lbl" id="hintArrowV">antenna el</span></span>
-    <span><b>W A S D</b><span class="lbl" id="hintWasd">pipper</span></span>
-    <span><b>TAB</b>step track</span>
-    <span><b>ENTER</b>lock</span>
-    <span><b>1 2 3</b>select weapon</span>
-    <span><b>SPACE</b>launch</span>
-    <span><b>ALT A</b>centre scan</span>
-    <span><b>ALT G</b>mode</span>
-    <span><b>ALT S</b>scale</span>
-    <span><b>ALT F</b>pattern</span>
   </div>
 </footer>
 
 <div id="toast"></div>
+
+<div id="controls">
+  <div class="dos-sheet frame ctrl-sheet">
+    <div class="dos-head">
+      <div>
+        <h2>CONTROLS</h2>
+        <p>KEY BINDINGS</p>
+      </div>
+    </div>
+    <div class="ctrl-grid">
+      <div><b>← →</b><span class="lbl" id="hintArrowAz">antenna az</span></div>
+      <div><b>↑ ↓</b><span class="lbl" id="hintArrowV">antenna el</span></div>
+      <div><b>W A S D</b><span class="lbl" id="hintWasd">pipper</span></div>
+      <div><b>TAB</b><span class="lbl">step track</span></div>
+      <div><b>ENTER</b><span class="lbl">lock / unlock</span></div>
+      <div><b>1 2 3</b><span class="lbl">select weapon</span></div>
+      <div><b>SPACE</b><span class="lbl">launch</span></div>
+      <div><b>ALT A</b><span class="lbl">centre scan</span></div>
+      <div><b>ALT G</b><span class="lbl">cycle mode</span></div>
+      <div><b>ALT S</b><span class="lbl">cycle scale</span></div>
+      <div><b>ALT F</b><span class="lbl">cycle pattern</span></div>
+      <div><b>/</b><span class="lbl">dossier</span></div>
+      <div><b>C</b><span class="lbl">this box</span></div>
+    </div>
+    <div class="dos-foot">
+      <span>MODE / SCALE / PATTERN also click to cycle in the footer</span>
+      <button class="btn" id="ctrlClose">CLOSE · ESC</button>
+    </div>
+  </div>
+</div>
 
 <div id="dossier">
   <div class="dos-sheet frame">

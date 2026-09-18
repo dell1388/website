@@ -155,12 +155,13 @@ around it:
 - **SRC vs TWS**: SRC paints a contact and lets it fade; TWS remembers it as
   a track that coasts between beam revisits - only a TWS mode can hold a
   lock, so you can't launch out of a plain search mode. They're genuinely
-  different jobs, not the same search with a memory bolted on: SRC gets the
-  wider half of the pattern list (a wide, low-revisit sweep, since it isn't
-  trying to keep a track alive) and TWS gets the narrower half (`SRC_PATTERN_RANGE`
-  / `TWS_PATTERN_RANGE` in `sim/config.js`) - and only a TWS mode auto-recentres
-  on `ALT A`; a SRC mode is a manual wide search by design, so that shortcut
-  is disabled there.
+  different jobs, not the same search with a memory bolted on, and now fly
+  entirely separate pattern sets (`SRC_PATTERNS` / `TWS_PATTERNS` in
+  `sim/config.js`): SRC gets wide, low-revisit boxes (30×30, 30×70, 120×15,
+  180×10) since it isn't trying to keep a track alive, while TWS gets
+  tighter ones built to revisit often enough to hold a lock (15×15, 30×15,
+  60×10, 120×5) - and only a TWS mode auto-recentres on `ALT A`; a SRC mode
+  is a manual wide search by design, so that shortcut is disabled there.
 - **Mode gates what you can even see**: an air target answers SRC/TWS, plus
   the HDN ("head-on") pair while it's actually closing on ownship - HDN is
   a threat-detection mode, not a general-purpose air search, and it never
@@ -225,8 +226,17 @@ targets; keep it in mind adding a new one.
 | `ALT` `F` | cycle pattern |
 | `ALT` `A` | centre the antenna |
 | `/` | target dossier |
+| `C` | this controls reference (also `ESC` to close) |
 | `SWAP KEYS` button | swap which of arrows/WASD drives the gimbal vs. the pipper |
-| mode / scale / pattern buttons | click to change directly |
+| mode / scale / pattern indicators | click to cycle, same as their `ALT` shortcuts |
+
+The full key list above lives in an on-demand box (`C`, or the CONTROLS
+button) rather than sitting inline in the footer - with `MODE` alone having
+9 possible values, a wall of always-visible hint text is exactly what once
+blew out the footer's height (and squeezed the scopes above it). The footer
+itself now only ever holds three single-value click-to-cycle indicators
+(MODE / SCALE / PATTERN) plus a small row of action buttons, so it can't
+grow past one line no matter how many modes or patterns exist.
 
 The pipper is a second reticle, moved with WASD (or, with `SWAP KEYS`,
 the arrows), that lives on the B-scope using its own axes - azimuth and

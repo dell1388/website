@@ -103,12 +103,14 @@ canvas{display:block;width:100%;height:100%}
 .st .rail i.spent{background:transparent;border:1px solid var(--p-dim);box-shadow:none}
 /* ---------- footer controls ---------- */
 /* Bounded fr shares, not auto - an "auto" flex-wrap column sizes itself to
-   fit its content UNwrapped, so it never actually wraps; it just grows
-   (MODE alone has 9 buttons) and starves the other columns' width until
-   THEIR content wraps into many rows instead, and align-items:stretch then
-   stretches every column to match that runaway height. Bounded fr shares
-   force wrapping to happen predictably inside each column instead. */
-footer{display:grid;grid-template-columns:2fr 1fr 1.3fr 1.6fr;gap:8px;align-items:stretch}
+   fit its content UNwrapped, so it never actually wraps; it just grows and
+   starves the other columns' width until THEIR content wraps into many
+   rows instead, and align-items:stretch then stretches every column to
+   match that runaway height. Bounded fr shares force wrapping to happen
+   predictably inside each column instead. MODE/SCALE/PATTERN are now a
+   single click-to-cycle indicator each (see .btn.indicator), so they only
+   need a small share; the buttons/links live in keys. */
+footer{display:grid;grid-template-columns:.8fr .8fr .9fr 2.2fr;gap:8px;align-items:stretch}
 .group{padding:20px 9px 9px;display:flex;gap:4px;align-items:center;flex-wrap:wrap;min-width:0}
 .btn{
   font-family:var(--pix);font-weight:700;font-size:12px;letter-spacing:.1em;text-transform:uppercase;
@@ -123,6 +125,10 @@ footer{display:grid;grid-template-columns:2fr 1fr 1.3fr 1.6fr;gap:8px;align-item
 .btn.alert:hover{color:#ffd166;border-color:var(--amber);box-shadow:0 0 12px rgba(255,176,0,.35)}
 .btn:disabled{opacity:.32;cursor:not-allowed;filter:grayscale(.6)}
 .btn:disabled:hover{color:var(--p-dim);border-color:var(--edge)}
+/* MODE/SCALE/PATTERN: one click-to-cycle indicator per group, not a button
+   per option - keeps each footer group to a single line regardless of how
+   many values it cycles through (MODE alone has 9). */
+.btn.indicator{color:var(--p-bright);min-width:74px;text-align:center}
 .keys{padding:20px 12px 9px;display:flex;gap:14px;align-items:center;justify-content:flex-end;flex-wrap:wrap;font-size:17px;color:var(--p-dim);min-width:0}
 .keys b{font-weight:700;color:var(--p);font-family:var(--pix);font-size:12px;
   border:1px solid var(--edge);border-radius:3px;padding:6px 6px 7px;margin-right:5px}
@@ -164,6 +170,22 @@ footer{display:grid;grid-template-columns:2fr 1fr 1.3fr 1.6fr;gap:8px;align-item
   .dos-grid{grid-template-columns:1fr 1fr;gap:8px}
   .row .d-prof,.row .d-opens{grid-column:1/-1;text-align:left}
 }
+
+/* ---------- controls overlay ---------- */
+/* Same open/close pattern as #dossier, and reuses its .dos-* chrome - a
+   toggleable box instead of a wall of hint text sitting in the footer,
+   which is what kept forcing the footer's height (and main's) around. */
+#controls{
+  position:fixed;inset:0;z-index:58;display:none;place-content:center;padding:20px;
+  background:rgba(3,7,3,.86);
+}
+#controls.on{display:grid}
+.ctrl-sheet{width:min(640px,94vw);padding:0}
+.ctrl-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px 26px;padding:16px 18px}
+.ctrl-grid>div{display:flex;align-items:center;gap:10px;font-size:16px;color:var(--p-dim)}
+.ctrl-grid b{font-weight:700;color:var(--p);font-family:var(--pix);font-size:12px;
+  border:1px solid var(--edge);border-radius:3px;padding:6px 6px 7px;white-space:nowrap}
+@media (max-width:600px){.ctrl-grid{grid-template-columns:1fr}}
 
 /* ---------- chooser overlay ---------- */
 #chooser{

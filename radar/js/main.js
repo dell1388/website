@@ -1,9 +1,9 @@
 import { buildWorld, tickWorld } from './sim/world.js';
-import { createRadar, mode, setMode, setScale, setPattern, slewGimbal,
+import { createRadar, mode, pattern, setMode, setScale, setPattern, slewGimbal,
          movePipper, updatePipperSelection, centerGimbal,
          tickRadar, stepSelection, toggleLock } from './sim/radar.js';
 import { MISSILES, LOADOUT, canFire } from './sim/weapons.js';
-import { MODES, SCALES_KM, PATTERNS, patternRangeFor } from './sim/config.js';
+import { MODES, SCALES_KM, patternsFor } from './sim/config.js';
 import { launchMissile, tickMissile } from './sim/missile.js';
 import { simulateIntercept } from './sim/intercept.js';
 import { buildTerrain } from './render/map.js';
@@ -11,6 +11,7 @@ import { drawB, drawC, drawE } from './render/scopes.js';
 import { Input } from './core/input.js';
 import { buildButtonGroups, updateHud, toast } from './ui/hud.js';
 import { buildDossier } from './ui/dossier.js';
+import { buildControls } from './ui/controls.js';
 import { initChooser } from './ui/chooser.js';
 
 export const VERSION = '2026.09.17-1';
@@ -25,6 +26,7 @@ class Game {
     this.selectedWeapon = 'amraam';   // the player's own pick now - nothing auto-selects by target kind
     this.input = new Input();
     this.dossier = buildDossier();
+    this.controls = buildControls();
     this.controlsSwapped = false;   // false: arrows=gimbal, WASD=pipper
     this.canvasB = document.getElementById('bscope');
     this.canvasC = document.getElementById('cscope');
@@ -32,20 +34,24 @@ class Game {
     this.flash = document.getElementById('flash') || this._makeFlash();
 
     buildButtonGroups({
-      onMode: (i) => { setMode(this.radar, i); toast(mode(this.radar).label, 'good'); },
-      onScale: (i) => setScale(this.radar, i),
-      onPattern: (i) => setPattern(this.radar, i),
+      onCycleMode: () => this._cycleMode(),
+      onCycleScale: () => this._cycleScale(),
+      onCyclePattern: () => this._cyclePattern(),
       onSelectWeapon: (id) => this._selectWeapon(id),
     });
 
     document.getElementById('dosClose')?.addEventListener('click', () => this.dossier?.toggle(false));
     document.getElementById('swapBtn')?.addEventListener('click', (e) => { this._toggleSwap(); e.currentTarget.blur(); });
     addEventListener('keydown', (e) => {
-      if (e.code === 'Escape' && this.dossier?.isOpen()) { this.dossier.toggle(false); }
+      if (e.code === 'Escape') {
+        if (this.dossier?.isOpen()) { this.dossier.toggle(false); }
+        if (this.controls?.isOpen()) { this.controls.toggle(false); }
+      }
       // Not KeyD: D also drives the pipper (or, swapped, the gimbal) right,
       // and every WASD tap would otherwise flip the dossier open.
       // Slash ('/', as in "?" for help).
       if (e.code === 'Slash') { this.dossier?.toggle(); }
+      if (e.code === 'KeyC') { this.controls?.toggle(); }
       // 1/2/3: pick which weapon SPACE will fire - plain number keys are
       // free (nothing else in this game uses digits).
       if (e.code === 'Digit1') { this._selectWeapon('amraam'); }
@@ -76,11 +82,9 @@ class Game {
   }
 
   _cyclePattern() {
-    const [lo, hi] = patternRangeFor(mode(this.radar));
-    const span = hi - lo + 1;
-    const next = lo + ((this.radar.patternIndex - lo + 1) % span);
-    setPattern(this.radar, next);
-    toast(PATTERNS[this.radar.patternIndex].label);
+    const span = patternsFor(mode(this.radar)).length;
+    setPattern(this.radar, (this.radar.patternIndex + 1) % span);
+    toast(pattern(this.radar).label);
   }
 
   _centerScan() {
