@@ -6,10 +6,16 @@
  * same convention as garrison/content/site.js.
  *
  * kind:
- *   'air'          - moving aircraft, painted by SRC / TWS
- *   'ground_fixed' - stationary, low return, painted by SRC HDN / TWS HDN
+ *   'air'          - moving aircraft, painted by SRC / TWS. Also painted by
+ *                    SRC HDN / TWS HDN, but only while actually closing on
+ *                    ownship - those modes are head-on detection, not a
+ *                    general-purpose air search
+ *   'ground_fixed' - stationary, low return, painted by SRC GMAP / TWS GMAP
+ *                    (ground-map modes; GMTI can't see it - see below)
  *   'ground_mover' - stationary position but classed as a mover, painted
- *                    only by SRC GMTI / TWS GMTI
+ *                    only by SRC GMTI / TWS GMTI - a real moving-target
+ *                    indicator works by rejecting zero-Doppler returns, so
+ *                    it's built to reject anything that isn't moving
  *   'sea'          - stationary surface contact, painted by TWS SEA
  *
  * Position is set in km, east/north of the origin the player starts over
@@ -72,9 +78,10 @@ export const TARGETS = [
     x: -8, y: 38,
     dossier: {
       cls: 'GROUND',
-      modes: 'SRC HDN · TWS HDN',
-      profile: 'Static site, low return, hidden in clutter. Needs a HDN ' +
-        'mode and a tight scan pattern to resolve.',
+      modes: 'SRC GMAP · TWS GMAP',
+      profile: 'Static site, low return, hidden in clutter. Needs a GMAP ' +
+        '(ground-map) mode and a tight scan pattern to resolve - it never ' +
+        'moves, so a GMTI mode is looking straight through it.',
     },
   },
   {

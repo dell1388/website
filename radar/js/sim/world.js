@@ -203,6 +203,24 @@ export function boresightVelocity(own, target) {
 }
 
 /**
+ * True if `c`'s range to ownship is currently shrinking - a real closing
+ * geometry, not just "is an aircraft somewhere out there." Used by the HDN
+ * (head-on) radar modes, which are built to pick up an approaching threat
+ * out of the noise rather than to search generally.
+ */
+export function isApproaching(world, c) {
+  const own = world.own;
+  const dx = c.x - own.x, dy = c.y - own.y, dz = c.altM - own.altM;
+  const range = Math.hypot(dx, dy, dz);
+  if (range < 1) { return true; }
+  const cVel = contactVelocityVec(c);
+  const ownVel = headingVector(own.headingDeg).scale(own.speedMps);
+  const rvx = cVel.x - ownVel.x, rvy = cVel.y - ownVel.y, rvz = cVel.z - ownVel.z;
+  const closingRateMps = -(dx * rvx + dy * rvy + dz * rvz) / range;
+  return closingRateMps > 0;
+}
+
+/**
  * Range (km), relative azimuth (deg, +right of nose) and relative elevation
  * (deg, +above) of a contact from the ownship's current position/heading.
  */

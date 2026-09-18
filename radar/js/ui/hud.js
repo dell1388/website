@@ -1,4 +1,4 @@
-import { MODES, SCALES_KM, PATTERNS } from '../sim/config.js';
+import { MODES, SCALES_KM, PATTERNS, patternRangeFor } from '../sim/config.js';
 import { mode, scaleKm, pattern } from '../sim/radar.js';
 import { MISSILES, LOADOUT } from '../sim/weapons.js';
 import { timeToImpactSec } from '../sim/missile.js';
@@ -30,6 +30,15 @@ function highlightGroup(id, index) {
   [...el.querySelectorAll('.btn')].forEach((b, i) => b.classList.toggle('on', i === index));
 }
 
+/** Grey out (and actually disable) patterns the current mode can't fly -
+ *  SRC never gets the tightest box, TWS never gets the widest. */
+function markPatternAvailability(radarMode) {
+  const el = $('patternGroup');
+  if (!el) { return; }
+  const [lo, hi] = patternRangeFor(radarMode);
+  [...el.querySelectorAll('.btn')].forEach((b, i) => { b.disabled = i < lo || i > hi; });
+}
+
 export function updateHud(world, radar, missiles, ammo) {
   const own = world.own;
   set('rMach', own.mach.toFixed(2));
@@ -53,6 +62,7 @@ export function updateHud(world, radar, missiles, ammo) {
   highlightGroup('modeGroup', radar.modeIndex);
   highlightGroup('scaleGroup', radar.scaleIndex);
   highlightGroup('patternGroup', radar.patternIndex);
+  markPatternAvailability(mode(radar));
 
   renderTracks(radar);
   renderStores(ammo);
@@ -66,7 +76,7 @@ function renderTracks(radar) {
     const t = radar.tracks.get(id);
     const sel = id === radar.selectedId ? ' sel' : '';
     const kc = KIND_CLASS[t.kind] || 'air';
-    const alt = t.altM ? Math.round(t.altM) : (t.kind === 'sea' ? 'SEA' : (t.kind === 'ground_mover' ? 'GMTI' : 'HDN'));
+    const alt = t.altM ? Math.round(t.altM) : (t.kind === 'sea' ? 'SEA' : (t.kind === 'ground_mover' ? 'GMTI' : 'GMAP'));
     return `<div class="trk ${kc}${sel}" data-id="${id}">
       <span class="sym">${KIND_SYM[t.kind] || '?'}</span>
       <span class="nm">${t.name}</span>

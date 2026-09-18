@@ -4,7 +4,7 @@ import { createRadar, mode, setMode, setScale, setPattern, slewGimbal,
          tickRadar, stepSelection, toggleLock } from './sim/radar.js';
 import { WEAPON_BY_KIND } from '../content/targets.js';
 import { LOADOUT } from './sim/weapons.js';
-import { MODES, SCALES_KM, PATTERNS } from './sim/config.js';
+import { MODES, SCALES_KM, PATTERNS, patternRangeFor } from './sim/config.js';
 import { launchMissile, tickMissile } from './sim/missile.js';
 import { simulateIntercept } from './sim/intercept.js';
 import { buildTerrain } from './render/map.js';
@@ -70,13 +70,16 @@ class Game {
   }
 
   _cyclePattern() {
-    setPattern(this.radar, (this.radar.patternIndex + 1) % PATTERNS.length);
+    const [lo, hi] = patternRangeFor(mode(this.radar));
+    const span = hi - lo + 1;
+    const next = lo + ((this.radar.patternIndex - lo + 1) % span);
+    setPattern(this.radar, next);
     toast(PATTERNS[this.radar.patternIndex].label);
   }
 
   _centerScan() {
-    centerGimbal(this.radar);
-    toast('SCAN CENTRED');
+    if (centerGimbal(this.radar)) { toast('SCAN CENTRED'); }
+    else { toast('NO AUTO-CENTRE · SRC', 'deny'); }
   }
 
   _toggleSwap() {

@@ -154,10 +154,21 @@ around it:
   orientation (it isn't a real return, and doesn't try to be).
 - **SRC vs TWS**: SRC paints a contact and lets it fade; TWS remembers it as
   a track that coasts between beam revisits - only a TWS mode can hold a
-  lock, so you can't launch out of a plain search mode.
-- **Mode gates what you can even see**: an air target only answers SRC/TWS,
-  a moving ground target only answers the GMTI modes, a fixed one only the
-  HDN modes, and a surface contact only TWS SEA. The dossier (`/`, or the
+  lock, so you can't launch out of a plain search mode. They're genuinely
+  different jobs, not the same search with a memory bolted on: SRC gets the
+  wider half of the pattern list (a wide, low-revisit sweep, since it isn't
+  trying to keep a track alive) and TWS gets the narrower half (`SRC_PATTERN_RANGE`
+  / `TWS_PATTERN_RANGE` in `sim/config.js`) - and only a TWS mode auto-recentres
+  on `ALT A`; a SRC mode is a manual wide search by design, so that shortcut
+  is disabled there.
+- **Mode gates what you can even see**: an air target answers SRC/TWS, plus
+  the HDN ("head-on") pair while it's actually closing on ownship - HDN is
+  a threat-detection mode, not a general-purpose air search, and it never
+  answers for anything on the ground. A moving ground target only answers
+  the GMTI modes; a real moving-target indicator works by rejecting
+  zero-Doppler returns, so it's built to reject anything that isn't moving,
+  which is why a *fixed* ground target instead needs a GMAP ("ground-map")
+  mode. A surface contact only answers TWS SEA. The dossier (`/`, or the
   button) explains this per-target.
 
 **Missiles** are auto-selected by target class - AIM-7 Sparrow (air),

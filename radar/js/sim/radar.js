@@ -1,6 +1,6 @@
 import { MODES, SCALES_KM, PATTERNS, GIMBAL, PIPPER, SWEEP_DEG_PER_SEC,
-         BLIP_FADE_SEC, TRACK_COAST_SEC } from './config.js';
-import { relativeTo } from './world.js';
+         BLIP_FADE_SEC, TRACK_COAST_SEC, patternRangeFor } from './config.js';
+import { relativeTo, isApproaching } from './world.js';
 import { clamp, wrapDeg } from '../core/rng.js';
 
 const BEAM_HALF_AZ = 3.5;
@@ -48,21 +48,34 @@ export function setMode(r, i) {
   r.blips.clear(); r.tracks.clear();
   r.selectedId = null; r.lockedId = null;
   r.barIndex = 0; r.sweepAz = 0; r.sweepDir = 1;
+  // Switching into a SRC mode can leave a TWS-only pattern selected (or
+  // vice versa) - snap it into whatever the new mode actually allows.
+  const [lo, hi] = patternRangeFor(mode(r));
+  r.patternIndex = clamp(r.patternIndex, lo, hi);
+  clampToScanBox(r);
 }
 export function setScale(r, i) {
   r.scaleIndex = clamp(i, 0, SCALES_KM.length - 1);
   r.pipperRangeKm = clamp(r.pipperRangeKm, 0, scaleKm(r));
 }
 export function setPattern(r, i) {
-  r.patternIndex = clamp(i, 0, PATTERNS.length - 1);
+  const [lo, hi] = patternRangeFor(mode(r));
+  r.patternIndex = clamp(i, lo, hi);
   r.barIndex = 0; r.sweepAz = 0; r.sweepDir = 1;
   clampToScanBox(r);   // a wider pattern can make the current antenna position invalid
 }
 
-/** ALT+A: snap the antenna back to dead ahead, level. */
+/**
+ * ALT+A: snap the antenna back to dead ahead, level. TWS only - a SRC mode
+ * is a wide manual sweep by design, so there's no auto-recentre to lean on;
+ * only once a mode is actually trying to hold a track does that shortcut
+ * make sense. Returns whether it actually centred anything.
+ */
 export function centerGimbal(r) {
+  if (!mode(r).tws) { return false; }
   r.antAz = 0; r.antEl = 0;
   clampToScanBox(r);
+  return true;
 }
 
 /** Move the gimbal (antenna centre) by a slew rate over dt, from input axes
@@ -170,6 +183,7 @@ export function tickRadar(r, world, dt) {
 
     for (const c of world.contacts) {
       if (!c.alive || !m.kinds.includes(c.kind)) { continue; }
+      if (m.requireApproaching && !isApproaching(world, c)) { continue; }
       const rel = relativeTo(world.own, c);
       if (rel.rangeKm > maxRange) { continue; }
       if (Math.abs(wrapDeg(rel.az - beam.az)) > BEAM_HALF_AZ) { continue; }
