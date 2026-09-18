@@ -90,8 +90,10 @@ canvas{display:block;width:100%;height:100%}
 .trk.air .sym{color:var(--p)} .trk.sea .sym{color:#3ec8ff} .trk.gnd .sym{color:#ffe14d}
 /* stores */
 .stores{padding:22px 8px 9px;display:grid;gap:5px}
-.st{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:6px 9px;border:1px solid var(--edge);border-radius:3px;font-size:17px}
+.st{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:6px 9px;border:1px solid var(--edge);border-radius:3px;font-size:17px;cursor:pointer;transition:border-color .12s,box-shadow .12s}
 .st.on{border-color:var(--amber);background:rgba(255,176,0,.10)}
+.st.sel{border-color:var(--p);box-shadow:0 0 0 1px var(--p),0 0 14px rgba(45,255,106,.4)}
+.st.sel .w{color:var(--p-bright)}
 .st .w{font-family:var(--pix);font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase}
 .st.on .w{color:var(--amber)}
 .st .q{color:var(--p-bright);font-size:19px}
@@ -100,8 +102,14 @@ canvas{display:block;width:100%;height:100%}
 .st.on .rail i{background:var(--amber);box-shadow:0 0 7px rgba(255,176,0,.7)}
 .st .rail i.spent{background:transparent;border:1px solid var(--p-dim);box-shadow:none}
 /* ---------- footer controls ---------- */
-footer{display:grid;grid-template-columns:auto auto auto 1fr;gap:8px;align-items:stretch}
-.group{padding:20px 9px 9px;display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+/* Bounded fr shares, not auto - an "auto" flex-wrap column sizes itself to
+   fit its content UNwrapped, so it never actually wraps; it just grows
+   (MODE alone has 9 buttons) and starves the other columns' width until
+   THEIR content wraps into many rows instead, and align-items:stretch then
+   stretches every column to match that runaway height. Bounded fr shares
+   force wrapping to happen predictably inside each column instead. */
+footer{display:grid;grid-template-columns:2fr 1fr 1.3fr 1.6fr;gap:8px;align-items:stretch}
+.group{padding:20px 9px 9px;display:flex;gap:4px;align-items:center;flex-wrap:wrap;min-width:0}
 .btn{
   font-family:var(--pix);font-weight:700;font-size:12px;letter-spacing:.1em;text-transform:uppercase;
   color:var(--p-dim);background:linear-gradient(180deg,#1d2617,#121810);
@@ -115,7 +123,7 @@ footer{display:grid;grid-template-columns:auto auto auto 1fr;gap:8px;align-items
 .btn.alert:hover{color:#ffd166;border-color:var(--amber);box-shadow:0 0 12px rgba(255,176,0,.35)}
 .btn:disabled{opacity:.32;cursor:not-allowed;filter:grayscale(.6)}
 .btn:disabled:hover{color:var(--p-dim);border-color:var(--edge)}
-.keys{padding:20px 12px 9px;display:flex;gap:14px;align-items:center;justify-content:flex-end;flex-wrap:wrap;font-size:17px;color:var(--p-dim)}
+.keys{padding:20px 12px 9px;display:flex;gap:14px;align-items:center;justify-content:flex-end;flex-wrap:wrap;font-size:17px;color:var(--p-dim);min-width:0}
 .keys b{font-weight:700;color:var(--p);font-family:var(--pix);font-size:12px;
   border:1px solid var(--edge);border-radius:3px;padding:6px 6px 7px;margin-right:5px}
 /* ---------- dossier ---------- */

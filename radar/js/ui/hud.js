@@ -7,10 +7,21 @@ const $ = (id) => document.getElementById(id);
 const KIND_SYM = { air: '◇', sea: '⬢', ground_fixed: '▣', ground_mover: '▣' };
 const KIND_CLASS = { air: 'air', sea: 'sea', ground_fixed: 'gnd', ground_mover: 'gnd' };
 
-export function buildButtonGroups({ onMode, onScale, onPattern }) {
+export function buildButtonGroups({ onMode, onScale, onPattern, onSelectWeapon }) {
   fillGroup('modeGroup', MODES.map((m) => m.label), onMode);
   fillGroup('scaleGroup', SCALES_KM.map((s) => String(s)), onScale);
   fillGroup('patternGroup', PATTERNS.map((p) => p.label), onPattern);
+
+  // One delegated listener rather than re-binding per row - renderStores
+  // rebuilds #storesList's innerHTML every tick, so per-element listeners
+  // would need re-attaching just as often.
+  const stores = $('storesList');
+  if (stores && onSelectWeapon) {
+    stores.addEventListener('click', (e) => {
+      const row = e.target.closest('.st');
+      if (row?.dataset.weapon) { onSelectWeapon(row.dataset.weapon); }
+    });
+  }
 }
 
 function fillGroup(id, labels, onPick) {
@@ -39,7 +50,7 @@ function markPatternAvailability(radarMode) {
   [...el.querySelectorAll('.btn')].forEach((b, i) => { b.disabled = i < lo || i > hi; });
 }
 
-export function updateHud(world, radar, missiles, ammo) {
+export function updateHud(world, radar, missiles, ammo, selectedWeapon) {
   const own = world.own;
   set('rMach', own.mach.toFixed(2));
   set('rAlt', Math.round(own.altM));
@@ -65,7 +76,7 @@ export function updateHud(world, radar, missiles, ammo) {
   markPatternAvailability(mode(radar));
 
   renderTracks(radar);
-  renderStores(ammo);
+  renderStores(ammo, selectedWeapon);
 }
 
 function renderTracks(radar) {
@@ -87,9 +98,18 @@ function renderTracks(radar) {
   }).join('') || '<div class="empty-hint">no tracks - sweep the beam over a contact</div>';
 }
 
-function renderStores(ammo) {
+let lastStoresSig = null;
+function renderStores(ammo, selectedWeapon) {
   const root = $('storesList');
   if (!root) { return; }
+  // Ammo barely ever changes (it's unlimited by default) and the selection
+  // only changes on a keypress/click - rebuilding this every single frame
+  // at 60fps would mean the row a click just landed on can be detached and
+  // replaced mid-click, which is exactly the kind of thing that makes a
+  // click flaky for a real user too, not just a test.
+  const sig = selectedWeapon + '|' + Object.values(MISSILES).map((w) => ammo[w.id]).join(',');
+  if (sig === lastStoresSig) { return; }
+  lastStoresSig = sig;
   root.innerHTML = Object.values(MISSILES).map((w) => {
     const total = LOADOUT[w.id];
     const left = ammo[w.id];
@@ -97,7 +117,8 @@ function renderStores(ammo) {
     const rail = unlimited
       ? ''
       : Array.from({ length: total }, (_, i) => `<i class="${i < left ? '' : 'spent'}"></i>`).join('');
-    return `<div class="st${(unlimited || left > 0) ? ' on' : ''}">
+    const sel = w.id === selectedWeapon ? ' sel' : '';
+    return `<div class="st${(unlimited || left > 0) ? ' on' : ''}${sel}" data-weapon="${w.id}">
       <span class="w">${w.label}</span><span class="rail">${rail}</span>
       <span class="q">${unlimited ? '' : left}</span>
     </div>`;

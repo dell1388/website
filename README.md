@@ -171,16 +171,26 @@ around it:
   mode. A surface contact only answers TWS SEA. The dossier (`/`, or the
   button) explains this per-target.
 
-**Missiles** are auto-selected by target class - AIM-7 Sparrow (air),
-AGM-84 Harpoon (surface), AGM-114L Hellfire (ground) - and are real engine
-bodies (`engine/profiles.js`) flying `Mode.PURSUE`: thrust burns fuel for a
-few tens of seconds, then the round coasts unpowered on stored energy and
-lift, same as a real weapon, rather than vanishing the instant the motor
-burns out. "Out of range" is a generous overall flight-time cap (a multiple
-of the burn time) as a safety valve against a round that can genuinely
-never catch its target - not the primary reachability gate. Sparrow is far
-more agile than the other two (`maxG` in its profile); Harpoon barely
-turns. Ammo is unlimited (`js/sim/weapons.js`'s `LOADOUT`).
+**The player picks the weapon** (`1`/`2`/`3`, or click STORES) - nothing
+auto-selects by target class, and picking wrong is a real failure mode, not
+just a worse choice (`js/sim/weapons.js`'s `canFire`/`profileNameFor`/
+`isNoDamage`):
+
+| Weapon | Refuses | Works, but... |
+|---|---|---|
+| AIM-120C-5 | any ground target | — |
+| AGM-84C | anything but a surface contact | — |
+| AGM-114L | nothing | flies a sharply less agile profile at an air target (`hellfire_missile_vs_air` - can still connect on an easy shot, unlikely on a hard one) and does no damage to a surface contact on a hit (fuzes fine, target survives) |
+
+All three are real engine bodies (`engine/profiles.js`) flying
+`Mode.PURSUE`: thrust burns fuel for a few tens of seconds, then the round
+coasts unpowered on stored energy and lift, same as a real weapon, rather
+than vanishing the instant the motor burns out. "Out of range" is a
+generous overall flight-time cap (a multiple of the burn time) as a safety
+valve against a round that can genuinely never catch its target - not the
+primary reachability gate. AIM-120C-5 is far more agile than the other two
+(`maxG` in its profile); AGM-84C barely turns. Ammo is unlimited
+(`js/sim/weapons.js`'s `LOADOUT`).
 
 A **projected-intercept cue** (`js/sim/intercept.js`) runs the same engine,
 profile and guidance against the current selection - forecasting the
@@ -194,9 +204,10 @@ frame.
 Since the ownship flies a fixed straight line north forever (no player
 control over heading), a stationary target's closest possible range is
 fixed at its crossrange offset for the whole flight - **that offset has to
-sit inside the assigned weapon's range**, or the shot is unwinnable no
-matter when it's fired. `content/targets.js` keeps this in mind when
-placing ground/sea targets; keep it in mind adding a new one.
+sit inside the reach of a weapon that can actually fire on it**, or the
+shot is unwinnable no matter when it's fired or which compatible weapon is
+picked. `content/targets.js` keeps this in mind when placing ground/sea
+targets; keep it in mind adding a new one.
 
 ### Controls (radar)
 
@@ -207,7 +218,8 @@ placing ground/sea targets; keep it in mind adding a new one.
 | `W` `A` `S` `D` | the pipper - a selection reticle, independent of the antenna |
 | `TAB` | step the selection through current tracks |
 | `ENTER` | lock / unlock the selection |
-| `SPACE` | launch at the lock |
+| `1` `2` `3` | select AIM-120C-5 / AGM-84C / AGM-114L |
+| `SPACE` | launch at the lock, with whichever weapon is selected |
 | `ALT` `G` | cycle mode |
 | `ALT` `S` | cycle scale |
 | `ALT` `F` | cycle pattern |

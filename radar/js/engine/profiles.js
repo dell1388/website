@@ -148,10 +148,10 @@ export const FIGHTER = profile({
  * thrust) is this game's "out of range" self-destruct, in place of the old
  * flat flight-time timer. Tuned so drag-limited top speed and burn duration
  * land roughly where the previous "double speed, half agility" tuning did,
- * while maxG keeps the same relative ordering (Sparrow most agile).
+ * while maxG keeps the same relative ordering (AMRAAM most agile).
  */
-export const SPARROW_MISSILE = profile({
-  name: 'sparrow_missile', kind: 'aircraft',
+export const AMRAAM_MISSILE = profile({
+  name: 'amraam_missile', kind: 'aircraft',
   massKg: 120.0, refAreaM2: 0.09, cd0: 0.3, clMax: 3.0, aspectRatio: 3.5,
   maxG: 16.0, thrustN: 11500.0, fuelKg: 75.0, burnRateKgs: 0.9,
   thrustMode: 'velocity', maxSpeedMps: 1400.0, radiusM: 0.2, captureRadiusM: 45.0,
@@ -169,6 +169,19 @@ export const HELLFIRE_MISSILE = profile({
   massKg: 49.0, refAreaM2: 0.05, cd0: 0.3, clMax: 4.5, aspectRatio: 4.0,
   maxG: 25.0, thrustN: 9500.0, fuelKg: 50.0, burnRateKgs: 0.65,
   thrustMode: 'velocity', maxSpeedMps: 900.0, radiusM: 0.15, captureRadiusM: 45.0,
+});
+
+/**
+ * Same airframe fired at an air target instead of the ground/GMTI targets
+ * it's actually built for - its laser/fire-and-forget seeker and control
+ * fins aren't sized for a fast-crossing aircraft, modelled here as sharply
+ * reduced turn authority (a quarter of the real round's `maxG`, and `clMax`
+ * down with it) rather than a scripted miss. It can still connect against
+ * an easy tail-chase shot; it will not against anything that needs real
+ * lead. See weapons.js's `profileNameFor`.
+ */
+export const HELLFIRE_MISSILE_VS_AIR = variant(HELLFIRE_MISSILE, 'hellfire_missile_vs_air', {
+  maxG: 2.5, clMax: 0.6,
 });
 
 /** Inert stand-in for a stationary (ground/sea) target inside a missile's
@@ -193,7 +206,8 @@ export function register(p) {
 
 for (const p of [AIRLINER, LIGHT_AIRCRAFT, GLIDER, SURVEY_DRONE, SOUNDING_ROCKET,
                   WEATHER_BALLOON, HIGH_ALT_PLATFORM, DROPSONDE, CARGO_CAPSULE, SAR_DRONE,
-                  FIGHTER, SPARROW_MISSILE, HARPOON_MISSILE, HELLFIRE_MISSILE, PHANTOM_TARGET]) {
+                  FIGHTER, AMRAAM_MISSILE, HARPOON_MISSILE, HELLFIRE_MISSILE,
+                  HELLFIRE_MISSILE_VS_AIR, PHANTOM_TARGET]) {
   register(p);
 }
 

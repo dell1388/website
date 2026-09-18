@@ -71,14 +71,16 @@ function drawHeadingPointer(g, x, y, x2, y2, color) {
 }
 
 /** Projected-intercept cue: where a shot fired right now would connect (or
- *  run out of motor trying to). Hit reads as a small green diamond, a miss
- *  as an amber ring with a short "OUT" tag - either way it's a forecast,
- *  not a real hit, so it never plays the flash/hit effects a real one does. */
-function drawInterceptCue(g, x, y, hit, text) {
-  const color = hit ? '#2dff6a' : '#ff5a3c';
+ *  run out of motor trying to, or simply refuse to fire at all). A hit
+ *  reads as a small green diamond, a miss as an amber ring, a wrong-weapon
+ *  "would refuse to fire" as a dim grey slash - either way it's a
+ *  forecast, not a real hit, so it never plays the flash/hit effects a
+ *  real one does. */
+function drawInterceptCue(g, x, y, status, text) {
+  const color = status === 'hit' ? '#2dff6a' : status === 'noshot' ? '#9c8f7c' : '#ff5a3c';
   g.strokeStyle = color; g.fillStyle = color; g.lineWidth = 1.5;
-  g.shadowColor = color; g.shadowBlur = 6;
-  if (hit) {
+  g.shadowColor = color; g.shadowBlur = status === 'noshot' ? 0 : 6;
+  if (status === 'hit') {
     g.beginPath();
     g.moveTo(x, y - 7); g.lineTo(x + 7, y); g.lineTo(x, y + 7); g.lineTo(x - 7, y);
     g.closePath(); g.stroke();
@@ -88,6 +90,15 @@ function drawInterceptCue(g, x, y, hit, text) {
   }
   g.shadowBlur = 0;
   if (text) { label(g, text, x + 9, y - 9, color, FONT_SM); }
+}
+
+function cueLabel(cue) {
+  if (cue.noShot) { return 'NO SHOT'; }
+  return cue.hit ? `T+${Math.round(cue.t)}S` : 'OUT';
+}
+function cueStatus(cue) {
+  if (cue.noShot) { return 'noshot'; }
+  return cue.hit ? 'hit' : 'miss';
 }
 
 /** Cheap, seedless, deterministic 0..1 noise - just for the E-scope's
@@ -160,7 +171,7 @@ export function drawB(cv, world, radar, missiles, terrain, time, cue) {
   if (cue && cue.point) {
     const rel = relativeTo(world.own, cue.point);
     if (rel.rangeKm <= maxR && Math.abs(rel.az) <= GIMBAL.azLimit) {
-      drawInterceptCue(g, X(rel.az), Y(rel.rangeKm), cue.hit, cue.hit ? `T+${Math.round(cue.t)}S` : 'OUT');
+      drawInterceptCue(g, X(rel.az), Y(rel.rangeKm), cueStatus(cue), cueLabel(cue));
     }
   }
 
@@ -324,7 +335,7 @@ export function drawE(cv, world, radar, missiles, time, cue) {
   if (cue && cue.point) {
     const rel = relativeTo(world.own, cue.point);
     if (rel.rangeKm <= maxR) {
-      drawInterceptCue(g, X(rel.rangeKm), Y(cue.point.altM), cue.hit, cue.hit ? `T+${Math.round(cue.t)}S` : 'OUT');
+      drawInterceptCue(g, X(rel.rangeKm), Y(cue.point.altM), cueStatus(cue), cueLabel(cue));
     }
   }
 

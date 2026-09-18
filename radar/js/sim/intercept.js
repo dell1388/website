@@ -18,7 +18,7 @@ import { Command, Mode } from '../engine/bodies.js';
 import { Vec3 } from '../engine/vec.js';
 import * as profiles from '../engine/profiles.js';
 import { contactVelocityVec, boresightVelocity, PHANTOM_ALT_FLOOR_M } from './world.js';
-import { MISSILES } from './weapons.js';
+import { MISSILES, profileNameFor } from './weapons.js';
 
 const STEP_SEC = 0.02;
 const COAST_FACTOR = 3.0;
@@ -32,7 +32,7 @@ const COAST_FACTOR = 3.0;
  */
 export function simulateIntercept(world, weaponId, target) {
   const w = MISSILES[weaponId];
-  const prof = profiles.get(w.profile);
+  const prof = profiles.get(profileNameFor(weaponId, target.kind));
   const own = world.own;
   const launchVel = boresightVelocity(own, target);
   const targetVel = contactVelocityVec(target);

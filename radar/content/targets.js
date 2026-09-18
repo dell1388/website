@@ -113,11 +113,4 @@ export const BOGEYS = [
   { id: 'bogey2', name: 'BOGEY 2', kind: 'air', x: -60, y: 80, altM: 1200, headingDeg: 95, mach: 0.82 },
 ];
 
-export const WEAPON_BY_KIND = {
-  air: 'sparrow',
-  ground_mover: 'hellfire',
-  ground_fixed: 'hellfire',
-  sea: 'harpoon',
-};
-
 export const OWNSHIP = { mach: 1.2, altM: 6000, headingDeg: 0 };

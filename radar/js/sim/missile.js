@@ -28,7 +28,7 @@ import { Command, Mode } from '../engine/bodies.js';
 import { Vec3 } from '../engine/vec.js';
 import * as profiles from '../engine/profiles.js';
 import { relativeTo, contactVelocityVec, boresightVelocity, PHANTOM_ALT_FLOOR_M } from './world.js';
-import { MISSILES } from './weapons.js';
+import { MISSILES, profileNameFor, isNoDamage } from './weapons.js';
 
 const MISSILE_DT = 0.02;   // fixed sub-step the engine's guidance/control gains are tuned for
 
@@ -40,7 +40,7 @@ const MISSILE_DT = 0.02;   // fixed sub-step the engine's guidance/control gains
  */
 export function launchMissile(world, weaponId, target) {
   const w = MISSILES[weaponId];
-  const prof = profiles.get(w.profile);
+  const prof = profiles.get(profileNameFor(weaponId, target.kind));
   const own = world.own;
   const launchVel = boresightVelocity(own, target);
 
@@ -61,6 +61,10 @@ export function launchMissile(world, weaponId, target) {
     x: body.position.x, y: body.position.y, altM: body.position.z,
     headingDeg: body.headingDeg(), pitchDeg: body.flightPathAngleDeg(), speed: body.speedMps,
     t: 0, maxFlightSec: burnTimeS * COAST_FACTOR, alive: true, hit: false, expired: false,
+    // A physical hit that still isn't a kill - the warhead's wrong for the
+    // job (see weapons.js's isNoDamage). Decided at launch since the
+    // target's kind doesn't change mid-flight.
+    noDamage: isNoDamage(weaponId, target.kind),
   };
 }
 
