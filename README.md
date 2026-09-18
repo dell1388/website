@@ -235,25 +235,39 @@ Two things worth knowing if you're editing the sim:
 
 ## The world view (`/radarworld/`)
 
-A plain top-down plot of every contact's *true* position relative to
-ownship - no radar set in between. It imports `radar/js/sim/world.js`
-directly (the same simulated world the radar page runs, not a
-reimplementation) and draws it straight: north up, ownship fixed at
-centre, every contact plotted by its real position regardless of mode,
-gimbal limit, or scan pattern. Useful as ground truth when you're not sure
-whether the radar picture is wrong or the sim is.
+A live **3D** plot of every contact's *true* position relative to ownship -
+no radar set in between, and not a flat readout: real geometry you drag to
+orbit and scroll to zoom, meant for watching the sim run and debugging it
+rather than for gameplay. It imports `radar/js/sim/world.js` directly (the
+same simulated world the radar page runs, not a reimplementation) and
+renders it with [three.js](https://threejs.org/), loaded from a CDN via an
+import map (`index.html`) - the only external script dependency anywhere
+on this site; every other page is hand-rolled canvas 2D.
 
 ```
 radarworld/
-  index.html   the shell + HUD
+  index.html   the shell + HUD + the <script type="importmap"> for three.js
   style.css    same phosphor-green panel language as the radar page
-  js/main.js   ticks the same world, draws the plot, nothing else
+  js/main.js   ticks the same world, builds/updates the three.js scene
 ```
+
+Ownship sits fixed at the scene origin every frame - everything else is
+plotted relative to it (`toScene()`), which is what lets `OrbitControls`'
+target stay put while ownship actually flies on, with no per-frame
+recentring. Altitude is exaggerated ×4 (`ALT_EXAGGERATION`) so vertical
+separation actually reads next to 100+ km horizontal ranges; a thin
+drop-line ties each contact to its ground projection the way an ATC 3D
+view would. Contacts are billboarded sprites (constant screen size
+regardless of zoom, like a real symbol set) with a canvas-textured name/
+range/altitude label; nearer contacts draw their label on top of farther
+ones when they cluster together, since both ignore the depth buffer.
 
 It's a separate, independent world instance - opening it doesn't share
 live state with an already-open radar tab (there's no backend to share it
-over), just the same deterministic starting conditions. `SCALE` picks a
-fixed view radius or auto-fits to whatever's currently furthest out.
+over), just the same deterministic starting conditions. `VIEW DISTANCE`
+re-points the camera at a preset distance along whatever direction you're
+already looking (a zoom shortcut, not a view reset) or auto-fits to
+whatever's currently furthest out.
 
 ### Plane or tank?
 

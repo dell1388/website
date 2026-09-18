@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="description" content="Top-down plot of every contact's true position relative to ownship - no radar in between." />
+<meta name="description" content="Live 3D plot of every contact's true position relative to ownship - no radar in between. Drag to orbit, scroll to zoom." />
 <meta name="theme-color" content="#070a05" />
 <title>Garrison World View</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -11,6 +11,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Saira+Condensed:wght@600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="style.css?v=1" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23070a05'/><path d='M8 1v14M1 8h14' stroke='%232dff6a' stroke-width='1.2'/><circle cx='8' cy='8' r='2' fill='%232dff6a'/></svg>" />
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
 </head>
 <body>
 
@@ -30,9 +38,10 @@
 
 <main>
   <div class="frame scope">
-    <span class="cap">TRUE POSITION · NORTH UP · OWNSHIP CENTRED</span>
-    <span class="cap r" id="wScale">AUTO · 60 KM</span>
+    <span class="cap">TRUE POSITION · 3D · OWNSHIP AT ORIGIN</span>
+    <span class="cap r" id="wScale">AUTO</span>
     <canvas id="map"></canvas>
+    <span class="cap b">drag to orbit &nbsp;·&nbsp; scroll to zoom &nbsp;·&nbsp; right-drag to pan</span>
   </div>
 
   <div class="side">
@@ -53,11 +62,11 @@
 
 <footer>
   <div class="frame group" id="zoomGroup">
-    <span class="cap">SCALE</span>
+    <span class="cap">VIEW DISTANCE</span>
   </div>
   <div class="frame keys">
     <span class="cap">ABOUT</span>
-    <span>Every object's real position, always - nothing here is gated by a radar mode, gimbal limit, or scan pattern. Useful for seeing what the radar picture is (or isn't) showing.</span>
+    <span>Every object's real position, always - nothing here is gated by a radar mode, gimbal limit, or scan pattern. Altitude is exaggerated ×4 so vertical separation actually reads; a thin drop-line ties each contact to its position on the ground.</span>
     <a class="btn" href="/radar/" style="text-decoration:none;display:inline-block">⇄ RADAR</a>
     <a class="btn" href="/" style="text-decoration:none;display:inline-block">⇄ TANK</a>
   </div>
