@@ -153,21 +153,21 @@ export const FIGHTER = profile({
 export const AMRAAM_MISSILE = profile({
   name: 'amraam_missile', kind: 'aircraft',
   massKg: 120.0, refAreaM2: 0.09, cd0: 0.3, clMax: 3.0, aspectRatio: 3.5,
-  maxG: 16.0, thrustN: 11500.0, fuelKg: 75.0, burnRateKgs: 0.9,
+  maxG: 16.0, thrustN: 51500.0, fuelKg: 75.0, burnRateKgs: 5,
   thrustMode: 'velocity', maxSpeedMps: 1400.0, radiusM: 0.2, captureRadiusM: 45.0,
 });
 
 export const HARPOON_MISSILE = profile({
   name: 'harpoon_missile', kind: 'aircraft',
   massKg: 235.0, refAreaM2: 0.16, cd0: 0.28, clMax: 2.5, aspectRatio: 2.5,
-  maxG: 6.0, thrustN: 8500.0, fuelKg: 190.0, burnRateKgs: 0.55,
+  maxG: 6.0, thrustN: 85000.0, fuelKg: 190.0, burnRateKgs: 5.5,
   thrustMode: 'velocity', maxSpeedMps: 650.0, radiusM: 0.25, captureRadiusM: 45.0,
 });
 
 export const HELLFIRE_MISSILE = profile({
   name: 'hellfire_missile', kind: 'aircraft',
   massKg: 49.0, refAreaM2: 0.05, cd0: 0.3, clMax: 4.5, aspectRatio: 4.0,
-  maxG: 25.0, thrustN: 9500.0, fuelKg: 50.0, burnRateKgs: 0.65,
+  maxG: 25.0, thrustN: 95000.0, fuelKg: 50.0, burnRateKgs: 12,
   thrustMode: 'velocity', maxSpeedMps: 900.0, radiusM: 0.15, captureRadiusM: 45.0,
 });
 
