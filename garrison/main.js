@@ -331,7 +331,7 @@ class Game {
  * fonts arrive late they simply appear - nothing needs to wait for them,
  * and a font CDN that never answers can no longer hold the game hostage.
  */
-export const VERSION = '2026.09.16-4';
+export const VERSION = '2026.10.03-5';
 
 const boot = () => {
   try {
