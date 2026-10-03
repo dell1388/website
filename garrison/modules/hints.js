@@ -35,12 +35,12 @@ export default {
     g.globalAlpha = alpha * 0.95;
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    g.font = '11px "VT323", ui-monospace, monospace';
+    g.font = '11px "VT323", "Pixelify Sans", ui-monospace, monospace';
     const msg = best.locked ? best.locked : (best.blurb || 'SHOOT TO ENTER');
     const sub = best.locked ? 'sealed for now' : 'shoot the target to enter';
 
     const y = best.y + 46;
-    g.font = '16px "VT323", ui-monospace, monospace';
+    g.font = '16px "VT323", "Pixelify Sans", ui-monospace, monospace';
     const w = Math.max(g.measureText(msg).width, g.measureText(sub).width) + 28;
     g.fillStyle = 'rgba(48,32,18,0.82)';
     g.beginPath();
@@ -50,7 +50,7 @@ export default {
     g.fillStyle = P.cream;
     g.fillText(msg, best.x, y + 15);
     g.fillStyle = best.locked ? '#d8b36a' : '#a9c98a';
-    g.font = '15px "VT323", ui-monospace, monospace';
+    g.font = '15px "VT323", "Pixelify Sans", ui-monospace, monospace';
     g.fillText(sub.toUpperCase(), best.x, y + 32);
     g.globalAlpha = 1;
   },
