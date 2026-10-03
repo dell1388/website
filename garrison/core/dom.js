@@ -26,6 +26,7 @@ const LINKS = [
   ['/clockwords/', 'Word War 3'],
   ['/wizardgame/', 'Aetherfall'],
   ['/vehicle-spotter/', 'Vehicle Spotter'],
+  ['/russian-vocab/', 'Транссиб'],
   ['/classic.html', 'Field Notes'],
 ];
 

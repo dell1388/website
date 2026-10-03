@@ -61,6 +61,17 @@ export const ROOMS = [
     decor: ['crate', 'barrel', 'tyre', 'grass'],
   },
   {
+    id: 'depot',
+    name: 'Транссиб',
+    blurb: 'Ride the Trans-Siberian and learn Russian words on the way.',
+    x: 60, y: 24, w: 16, h: 11,
+    floor: 'dirt',
+    accent: '#c0503a',
+    href: '/russian-vocab/',
+    corridor: { order: 'h' },
+    decor: ['crate', 'lantern', 'tree'],
+  },
+  {
     id: 'workshop',
     name: 'The Workshop',
     blurb: 'Where the next thing gets built. Empty for now.',
