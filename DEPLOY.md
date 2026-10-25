@@ -1,10 +1,43 @@
 # Deploying to igry.mooo.com
 
+## Automatic (GitHub Actions)
+
+Every push to `main` runs `.github/workflows/deploy.yml`, which rsyncs the
+files below to the server over SSH, then curls the live site to check it.
+It can also be run by hand: Actions tab -> Deploy -> Run workflow.
+
+One-time setup, in the repo's Settings -> Secrets and variables -> Actions:
+
+| secret | value |
+|---|---|
+| `SSH_HOST` | `igry.mooo.com` (or `150.136.7.214`) |
+| `SSH_USER` | the login user on the server, e.g. `ubuntu` or `opc` |
+| `SSH_KEY` | a private key whose public half is in that user's `~/.ssh/authorized_keys` |
+| `DEPLOY_PATH` | the web root, e.g. `/var/www/html` |
+| `SSH_KNOWN_HOSTS` | optional: output of `ssh-keyscan igry.mooo.com`, pins the server key |
+
+Make a dedicated key rather than reusing your own:
+
+```
+ssh-keygen -t ed25519 -f deploy_key -N ""           # on your machine
+ssh-copy-id -i deploy_key.pub USER@igry.mooo.com    # or append it by hand
+```
+
+Paste `deploy_key` (the private one) into `SSH_KEY`, then delete the local
+copy. The user needs write access to `DEPLOY_PATH`. Until all four required
+secrets exist, the workflow skips with a warning instead of failing.
+
+The workflow only ever touches the files listed below; `--delete` is scoped
+to `garrison/`, so other projects at the web root are left alone.
+
+## Manual
+
 Upload, next to each other at the web root:
 
 ```
 index.html        the tank page
 classic.html      plain card list
+sitemap.xml       sitemap
 garrison/         the whole directory, folders intact
 bg.jpg            only used by classic.html; already there
 ```

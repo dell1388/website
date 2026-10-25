@@ -1,0 +1,72 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      SSH_KEY: ${{ secrets.SSH_KEY }}
+      SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+    steps:
+      - name: Check secrets
+        id: cfg
+        run: |
+          missing=""
+          for v in SSH_HOST SSH_USER SSH_KEY DEPLOY_PATH; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::warning::Deploy skipped - missing secrets:$missing (see DEPLOY.md)"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.cfg.outputs.ok == 'true'
+
+      - name: Set up SSH
+        if: steps.cfg.outputs.ok == 'true'
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          if [ -n "$SSH_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            echo "::warning::SSH_KNOWN_HOSTS not set - trusting whatever key $SSH_HOST presents"
+            ssh-keyscan -H "$SSH_HOST" > ~/.ssh/known_hosts
+          fi
+
+      # Only this project's files. Never --delete at the web root: /js/,
+      # /style.css, /wizardgame/, /clockwords/ etc. belong to other projects
+      # (see DEPLOY.md). --delete is scoped to garrison/, which is ours alone.
+      - name: Upload
+        if: steps.cfg.outputs.ok == 'true'
+        run: |
+          SSH="ssh -i ~/.ssh/id_deploy -o IdentitiesOnly=yes"
+          DEST="$SSH_USER@$SSH_HOST:${DEPLOY_PATH%/}"
+          rsync -rtvz --chmod=D755,F644 -e "$SSH" \
+            index.html classic.html sitemap.xml bg.jpg "$DEST/"
+          rsync -rtvz --delete --chmod=D755,F644 -e "$SSH" \
+            garrison/ "$DEST/garrison/"
+
+      - name: Smoke test
+        if: steps.cfg.outputs.ok == 'true'
+        run: |
+          for p in / /garrison/main.js /garrison/content/site.js; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "http://igry.mooo.com$p")
+            echo "$p -> $code"
+            [ "$code" = 200 ] || exit 1
+          done
